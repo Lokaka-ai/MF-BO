@@ -15,9 +15,6 @@ def adapt_prompt(agent, prompt, stage):
         "aggregation": "Combine the strongest complementary ideas from the supplied branch trajectories into a new feasible algorithm.",
     }
     prompt["Introduction"] = "You are an expert in mathematical algorithm discovery and numerical optimization. "+actions[stage]
-    # Keep authentic MLEvolve evolution instructions when explicitly selected as a control.
-    if stage == "evolution" and getattr(agent.cfg, "audited_bo", "baseline") == "preserved_evolution":
-        return prompt["Introduction"]
     prompt["Instructions"] = {
         "Response format": "Return a brief concrete plan followed by one Python code block containing the complete candidate module.",
         "Planning": ["Explain the construction representation, objective and feasibility checks; propose a bounded CPU algorithm.",

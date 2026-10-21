@@ -134,32 +134,6 @@ class Phase1SelectorRuntime:
     def __init__(self, cfg):
         validate_root_draft_config(cfg)
         self.cfg = cfg
-        variant = getattr(cfg, "research_bo", "baseline")
-        if variant != "baseline":
-            from .research_bo import VARIANTS
-            if variant not in VARIANTS or not cfg.acq7.enabled or cfg.study7.method_id != "AQ04":
-                raise ValueError("Research BO variants require the AQ04 base configuration")
-            if variant in {"frontier", "portfolio"}:
-                expected_cap = 3 + max(0, (int(cfg.agent.steps) - 3) // 8)
-                if cfg.shared_draft_pool or int(cfg.agent.initial_drafts) != 3 or int(cfg.agent.search.num_drafts) != expected_cap:
-                    raise ValueError("Frontier variants require fresh drafts, initial_drafts=3 and num_drafts=3+(steps-3)//8")
-        audited = getattr(cfg, "audited_bo", "baseline")
-        if audited != "baseline":
-            from .audited_bo import METHODS, draft_cap
-            if (audited not in METHODS or variant != "baseline" or not cfg.acq7.enabled
-                    or cfg.study7.method_id != METHODS[audited]):
-                raise ValueError("Audited BO variant/preset mismatch or mixed v1/v2 interventions")
-            if audited == "preserved_evolution" and cfg.task_type != "alphaevolve":
-                raise ValueError("Preserved evolution comparison requires the AlphaEvolve host evaluator")
-            if audited == "redesign" and cfg.task_type not in {"alphaevolve", "competition"}:
-                raise ValueError("Redesigned evolution requires an AlphaEvolve or competition host evaluator")
-            if audited == "redesign" and cfg.task_type == "competition" and not cfg.evaluation.enabled:
-                raise ValueError("Competition redesigned evolution requires fixed host evaluation")
-            if audited == "representation_frontier":
-                if (cfg.shared_draft_pool or int(cfg.agent.initial_drafts) != 3
-                        or int(cfg.agent.search.num_drafts) != draft_cap(int(cfg.agent.steps))
-                        or int(cfg.agent.search.num_improves) < 2):
-                    raise ValueError("Audited Frontier requires fresh initial drafts, reserved draft cap and >=2 child slots")
         self.rating_config = RatingPriorConfig.from_config(cfg)
         self.rating_enabled = self.rating_config.enabled
         if self.rating_enabled and str(cfg.parent_selector.type) not in {
@@ -290,17 +264,8 @@ class Phase1SelectorRuntime:
                     records_provider=self.transition_store.records, selection_logger=self.selection_logger)
             elif self.acq7_enabled:
                 from .acq7_selector import Acq7Selector
-                variant = getattr(cfg, "research_bo", "baseline")
-                selector_class = Acq7Selector
-                extra = {}
-                if variant != "baseline":
-                    from .research_bo import ResearchBOSelector
-                    selector_class, extra = ResearchBOSelector, {"variant": variant}
-                if getattr(cfg, "audited_bo", "baseline") != "baseline":
-                    from .audited_bo import AuditedBOSelector
-                    selector_class, extra = AuditedBOSelector, {"variant": cfg.audited_bo}
-                self.study7_selector = selector_class(config=self.study7_settings,
-                    records_provider=self.transition_store.records, selection_logger=self.selection_logger, **extra)
+                self.study7_selector = Acq7Selector(config=self.study7_settings,
+                    records_provider=self.transition_store.records, selection_logger=self.selection_logger)
             elif self.branch7_enabled:
                 from .branch7_selector import Branch7Selector
                 self.study7_selector = Branch7Selector(config=self.study7_settings,
@@ -1194,16 +1159,6 @@ class Phase1SelectorRuntime:
                 preview=OperatorPreview("draft", bypass_selector=True, reason="initial_draft"))
         if self.wait_initial_results and state["initial_terminal"] < state["initial_goal"]:
             raise SelectionPending(state["revision"])
-        if self.acq7_enabled and getattr(self.cfg, "research_bo", "baseline") in {"frontier", "portfolio"}:
-            from .research_bo import restart_due
-            if restart_due(state):
-                return self._forced_result(agent, agent.virtual_root, reason="research_frontier_restart",
-                    preview=OperatorPreview("draft", bypass_selector=True, reason="research_frontier_restart"))
-        if getattr(self.cfg, "audited_bo", "baseline") == "representation_frontier":
-            from .audited_bo import rewrite_due
-            if rewrite_due(state, steps=int(agent.acfg.steps)):
-                return self._forced_result(agent, agent.virtual_root, reason="audited_representation_rewrite",
-                    preview=OperatorPreview("draft", bypass_selector=True, reason="audited_representation_rewrite"))
         options = self._prefer_unoccupied_options(self._add_root_option(agent, self._normal_options(agent)))
         if state["initial_terminal"] >= state["initial_goal"] and (
             getattr(agent.acfg, "use_aggregation", True) and should_trigger_branch_fusion(agent)
@@ -1475,17 +1430,6 @@ class Phase1SelectorRuntime:
                     raise SearchExhausted("Search step/time budget exhausted")
             if self.wait_initial_results and self.root_draft_state["initial_terminal"] < self.root_draft_state["initial_goal"]:
                 raise SelectionPending(self.root_draft_state["revision"])
-            if getattr(self.cfg, "audited_bo", "baseline") == "representation_frontier":
-                from .audited_bo import rewrite_due
-                if rewrite_due(self.root_draft_state, steps=int(agent.acfg.steps)):
-                    # Use the same locked reservation/dispatch path as a root
-                    # decision, then close the displaced native continuation.
-                    context = self.select_global_parent(agent)
-                    record, backpropagated = self._close_current_continuation(agent, current_node)
-                    self._log_continuation_event(result=context.result, current_node=current_node,
-                        outcome="new_direction", transition_id=record.transition_id if record else None,
-                        reward=record.reward if record else None, backpropagated=backpropagated)
-                    return context
             options = self._continuation_options(
                 agent,
                 current_node,

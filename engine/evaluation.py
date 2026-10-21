@@ -51,7 +51,6 @@ def get_node_reward(agent, node: SearchNode):
 
 def check_improvement(agent, cur_node: SearchNode, parent_node: SearchNode):
 
-
     improvement = 0
     should_backpropagate = False
     runtime = getattr(agent, "phase1_runtime", None)

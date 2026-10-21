@@ -33,7 +33,7 @@ def test_required_selector_modes_and_current_production_defaults():
     assert cfg.bo_parent_selector.min_total_transitions == 0
     assert cfg.bo_parent_selector.min_operator_observations == 0
     assert cfg.bo_parent_selector.acquisition.type == "thompson"
-    assert cfg.bo_parent_selector.acquisition.thompson_temperature == 0.35
+    assert cfg.bo_parent_selector.acquisition.thompson_temperature == 1.0
     assert cfg.bo_parent_selector.value_model.target == "incumbent_h1"
     assert cfg.bo_parent_selector.value_model.horizon == 1
     assert cfg.bo_parent_selector.value_model.feature_set == "exact10"

@@ -530,8 +530,6 @@ def _run_fixed(agent, node, exec_result):
         if response.get("is_bug") is True:
             node.is_buggy, node.is_valid = True, False
     except Exception as exc:
-        from engine.research_termination import record_review_failure
-        record_review_failure(agent, exc)
         # Summary availability cannot replace or invalidate a programmatic score.
         logger.warning("Execution summary unavailable (%s); preserving fixed result", type(exc).__name__)
         from agents import study7_rating

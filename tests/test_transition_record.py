@@ -63,7 +63,6 @@ def test_invalid_child_records_cost_but_not_gain_and_keeps_original_reward(tmp_p
     context = StepDecisionContext(SelectorResult(decision, option, (score,), (option,)))
 
     runtime = Phase1SelectorRuntime.__new__(Phase1SelectorRuntime)
-    runtime.legacy_checkpoint = False
     runtime.transition_store = TransitionStore(tmp_path / "transitions.jsonl")
     reward = evaluation.get_node_reward(agent, child)
     record = runtime.record_transition(
@@ -113,7 +112,6 @@ def test_transition_store_recovers_from_jsonl(tmp_path):
     score = CandidateScore("p", "improve", (), -0.4, None, None, None, None, None, 0.0)
     context = StepDecisionContext(SelectorResult(decision, option, (score,), (option,)))
     runtime = Phase1SelectorRuntime.__new__(Phase1SelectorRuntime)
-    runtime.legacy_checkpoint = False
     runtime.transition_store = TransitionStore(tmp_path / "transitions.jsonl")
     runtime.record_transition(
         parent_node=parent,

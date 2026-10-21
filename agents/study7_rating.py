@@ -45,16 +45,6 @@ def extend_review(agent, node, prompt, spec):
                        workflow_seed=int(agent.acfg.seed),
                        gpu_count_per_workflow=int(agent.scfg.num_gpus),
                        cpus_per_worker=max(1, int(agent.cfg.cpu_number) // int(agent.scfg.parallel_search_num)))
-    if (getattr(agent.cfg, "audited_bo", "baseline") == "task_correct"
-            and getattr(agent.cfg, "task_type", None) == "alphaevolve"):
-        context.pop("training_seconds_per_trial", None)
-        context.pop("initialization", None)
-        context.update(task_type="alphaevolve",
-                       protocol_id=getattr(getattr(agent, "alphaevolve", None), "protocol_id", None),
-                       evaluation_kind="host_verified_mathematical_construction",
-                       workflow_budget_seconds=int(agent.acfg.time_limit),
-                       workflow_seed=int(agent.acfg.seed), gpu_count_per_workflow=0,
-                       cpus_per_worker=max(1, int(agent.cfg.cpu_number) // int(agent.scfg.parallel_search_num)))
     prompt["Introduction"] += '\nReturn one additional nullable integer field: "potential_level".'
     prompt["Fixed task and resource protocol for potential assessment"] = {
         "task": getattr(agent, "task_desc", ""),
@@ -62,9 +52,6 @@ def extend_review(agent, node, prompt, spec):
         # Keep typed context in the audit metadata, and render it for transport.
         "resources": json.dumps(context, ensure_ascii=False, sort_keys=True)}
     prompt["Completed-node potential assessment"] = INSTRUCTIONS
-    if context.get("task_type") == "alphaevolve":
-        prompt["Completed-node potential assessment"] = INSTRUCTIONS.replace(
-            "public training/validation diagnostics", "public mathematical execution/constraint diagnostics")
     spec.json_schema["properties"]["potential_level"] = {
         "anyOf": [{"type": "integer", "enum": [0, 1, 2]}, {"type": "null"}],
         "description": "Remaining potential of the completed current code; null if unavailable."}

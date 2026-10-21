@@ -24,7 +24,6 @@ import uuid
 from engine.parent_selectors.base import OperatorPreview, ExpansionOption, SelectionDecision, SelectorResult, utc_timestamp
 from engine.parent_selectors.transition_store import TransitionStore, TransitionRecord
 from engine.parent_selectors.rating_prior import RatingPriorConfig, potential_level
-from engine.operator_preview import is_normal_operator
 
 SOURCE=Path(__file__).resolve().parents[1]/'engine/parent_selectors/runtime.py'
 study_config=runpy.run_path(str(SOURCE.parents[2]/'config/study7.py'))
@@ -71,7 +70,6 @@ class TestRuntimeContract(unittest.TestCase):
         self.tmp=tempfile.TemporaryDirectory();self.addCleanup(self.tmp.cleanup)
         self.runtime=object.__new__(Runtime)
         r=self.runtime;r.include_root_draft=True;r.gp_enabled=True;r.agent_enabled=False;r.managed_decisions=True
-        r.legacy_checkpoint=False
         r.study7_enabled=False;r.wait_initial_results=True
         r.branch7_enabled=False;r.branch7_gp6_enabled=False;r.acq7_enabled=False
         r.cfg=NS()
@@ -83,7 +81,7 @@ class TestRuntimeContract(unittest.TestCase):
             sum(n.stage=='draft' for n in root.children)
             + max(0,root.expected_child_count-len(root.children)) >= scfg.num_drafts)
         journal=NS(nodes=[]);journal.append=journal.nodes.append
-        self.agent=NS(cfg=NS(),virtual_root=root,journal=journal,metric_maximize=True,
+        self.agent=NS(virtual_root=root,journal=journal,metric_maximize=True,
                       scfg=NS(max_debug_depth=3,metric_improvement_threshold=0.,num_drafts=3),
                       acfg=NS(steps=5,time_limit=1000),search_start_time=None)
         r._agent=self.agent

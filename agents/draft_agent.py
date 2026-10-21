@@ -21,7 +21,7 @@ from agents.planner import build_chat_prompt_for_model
 logger = logging.getLogger("MLEvolve")
 
 
-def run(agent, init_solution_path: Optional[str] = None, *, fresh_representation=False) -> SearchNode:
+def run(agent, init_solution_path: Optional[str] = None) -> SearchNode:
     """Generate initial draft. If init_solution_path is provided and readable, use file content directly."""
     if init_solution_path:
         try:
@@ -166,10 +166,6 @@ def run(agent, init_solution_path: Optional[str] = None, *, fresh_representation
 
     from tasks.alphaevolve.prompts import adapt_prompt
     introduction = adapt_prompt(agent, prompt, 'draft')
-    if getattr(agent.cfg, "audited_bo", "baseline") == "representation_frontier":
-        from engine.parent_selectors.audited_bo import representation_prompt
-        representation_prompt(agent, prompt, fresh=fresh_representation)
-        introduction = prompt["Introduction"]
 
     instructions = f"\n# Instructions\n\n"
     instructions += compile_prompt_to_md(prompt["Instructions"], 2)

@@ -30,8 +30,6 @@ def test_interruption_preserves_shared_drafts_queue_and_native_results(setting, 
     src = REPO.parents[2]
     cfg = OmegaConf.merge(_load_cfg(use_cli_args=False), OmegaConf.load(src / "tasks/autoresearch/config.yaml"),
                          OmegaConf.load(src / f"config/experiments/{setting}.yaml"))
-    # Match the sealed shared-pool fixture rather than mutable live defaults.
-    cfg.agent.code.model = "muse-spark-1.3-contributor"
     run_root = tmp_path / "run"
     cfg.log_dir = run_root / "logs"; cfg.workspace_dir = run_root / "workspace"
     cfg.workspace_dir.mkdir(parents=True); cfg.log_dir.mkdir()

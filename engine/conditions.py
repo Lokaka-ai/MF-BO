@@ -40,8 +40,8 @@ def is_branch_stagnant(agent, branch_id: int, threshold: int = 3) -> bool:
     """True if branch has no improvement over branch best for the last threshold attempts."""
     if not getattr(agent.scfg, "use_stagnation_detection", True):
         return False
-    if getattr(getattr(agent, "cfg", None), "audited_bo", "baseline") in {"plateau", "representation_frontier", "redesign", "preserved_evolution"}:
-        from engine.parent_selectors.audited_bo import plateau_state
+    if getattr(getattr(agent, "cfg", None), "audited_bo", "baseline") == "redesign":
+        from engine.redesign_evidence import plateau_state
         return plateau_state(agent, branch_id)["stale"] >= threshold
     if branch_id not in agent.branch_successful_nodes:
         return False
@@ -92,8 +92,8 @@ def is_globally_stagnant(agent) -> bool:
     """True if no significant improvement in the last window_size nodes."""
     if not getattr(agent.scfg, "use_stagnation_detection", True):
         return False
-    if getattr(getattr(agent, "cfg", None), "audited_bo", "baseline") in {"plateau", "representation_frontier", "redesign", "preserved_evolution"}:
-        from engine.parent_selectors.audited_bo import plateau_state
+    if getattr(getattr(agent, "cfg", None), "audited_bo", "baseline") == "redesign":
+        from engine.redesign_evidence import plateau_state
         return plateau_state(agent)["stale"] >= agent.stagnation_threshold
     if not agent.best_node or not agent.best_node.metric:
         return False

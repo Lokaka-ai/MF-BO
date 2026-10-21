@@ -14,9 +14,6 @@ def test_alphaevolve_aq04_defaults_to_redesign(monkeypatch):
     assert cfg.audited_bo == 'redesign'
     assert cfg.study7.method_id == 'AQ04' and cfg.acq7.enabled
     monkeypatch.setattr(sys, 'argv', ['run.py', 'task_preset=alphaevolve', 'exp_id=kissing_number_d11',
-                                     'audited_bo=preserved_evolution'])
-    assert _load_cfg().audited_bo == 'preserved_evolution'
-    monkeypatch.setattr(sys, 'argv', ['run.py', 'task_preset=alphaevolve', 'exp_id=kissing_number_d11',
                                      'experiment_preset=gp6'])
     assert _load_cfg().get('audited_bo', 'baseline') == 'baseline'
 

@@ -28,26 +28,8 @@ import torch
 
 
 
-_research_receipt = None
-
-
 def run():
-    global _research_receipt
-    _research_receipt = None
-    try:
-        return _run()
-    except BaseException as exc:
-        if _research_receipt is not None:
-            _research_receipt.failed(exc)
-        raise
-
-
-def _run():
-    global _research_receipt
     cfg = load_cfg()
-    if os.environ.get("BO_TERMINATION_FILE"):
-        from engine.research_termination import TerminationReceipt
-        _research_receipt = TerminationReceipt(cfg)
     run_info = {"log_dir": str(cfg.log_dir), "workspace_dir": str(cfg.workspace_dir), "fixed_evaluation": fixed_enabled(cfg)}
     if cfg.run_result_file:
         Path(cfg.run_result_file).write_text(json.dumps(run_info))
@@ -188,8 +170,6 @@ def _run():
                 persist_run_state()
                 raise
             except Exception as e:
-                if _research_receipt is not None:
-                    _research_receipt.error(e)
                 logger.exception(f"❌ Exception during draft {draft_idx + 1} generation: {e}")
 
         logger.info(f"✅ Phase 1 complete: {len(pending_draft_nodes)} draft codes generated")
@@ -210,8 +190,6 @@ def _run():
             except EvaluationError:
                 raise
             except Exception as e:
-                if _research_receipt is not None:
-                    _research_receipt.error(e)
                 logger.exception(f"❌ Exception during draft node {node.id} execution: {e}")
                 return None
 
@@ -259,8 +237,6 @@ def _run():
                         logger.info("Search worker finished: %s", e)
                         cur_node = None
                         exhausted = True
-                        if _research_receipt is not None:
-                            _research_receipt.exhausted(e)
                     except (AgentSelectionError, EvaluationError):
                         logger.exception("Agent selector failed; stopping this run without an algorithm fallback")
                         with lock:
@@ -270,8 +246,6 @@ def _run():
                         interpreter.terminate_all_subprocesses()
                         raise
                     except Exception as e:
-                        if _research_receipt is not None:
-                            _research_receipt.error(e)
                         logger.exception(f"❌ Exception during task execution: {e}")
                         cur_node = None
 
@@ -319,20 +293,13 @@ def _run():
             logger.info(f"✅ All steps completed in Phase 1 (total_steps={total_steps} <= initial_draft_count={initial_draft_count})")
 
     interpreter.cleanup_session(-1)
-    completed = persist_run_state()
-    if _research_receipt is not None:
-        _research_receipt.search_finished(completed)
+    persist_run_state()
     if competition_checkpoint is not None:
         competition_checkpoint.set()
         # Allocation boundaries never invoke fusion/grading. The supervisor
         # finalizes once, after the cumulative budget or step cap is reached.
         return
     if getattr(agent, "alphaevolve", None):
-        best = journal.get_best_node()
-        if (_research_receipt is not None and (best is None or not best.is_valid)
-                and _research_receipt.data.get("search_finished_normally")):
-            _research_receipt.complete(no_valid=True)
-            return
         agent.alphaevolve.finalize(journal)
     elif agent.autoresearch:
         agent.autoresearch.finalize(journal)
@@ -345,9 +312,6 @@ def _run():
             tag_path=str(Path(__file__).resolve().parent / "engine/coldstart/competition_tag_classified.json"),
             use_llm_selection=False,
         ), run_info=run_info)
-
-    if _research_receipt is not None:
-        _research_receipt.complete()
 
 
 if __name__ == "__main__":

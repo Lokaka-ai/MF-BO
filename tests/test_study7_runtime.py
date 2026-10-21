@@ -83,8 +83,6 @@ def factory(tmp_path, monkeypatch, autoresearch_cache):
     monkeypatch.setattr("engine.parent_selectors.rating_prior.prior_terms", lambda *a, **kw: pytest.fail("Old piBO invoked"))
     def build(setting, shared=True):
         cfg = load_setting(setting)
-        # The shared-pool fixture is sealed with this model, independently of live defaults.
-        cfg.agent.code.model = "muse-spark-1.3-contributor"
         directory = tmp_path / setting
         cfg.log_dir, cfg.workspace_dir = directory / "logs", directory / "workspace"
         cfg.workspace_dir.mkdir(parents=True, exist_ok=True)

@@ -78,8 +78,6 @@ def test_replay_keeps_native_execution_feedback_rating_memory_and_transitions(se
     root = REPO.parents[2]
     cfg = OmegaConf.merge(_load_cfg(use_cli_args=False), OmegaConf.load(root / "tasks/autoresearch/config.yaml"),
                          OmegaConf.load(root / f"config/experiments/{setting}.yaml"))
-    # The sealed fixture was generated with this model, independent of the live default.
-    cfg.agent.code.model = "muse-spark-1.3-contributor"
     cfg.workspace_dir = tmp_path / "workspace"; cfg.log_dir = tmp_path / "logs"
     cfg.workspace_dir.mkdir(); cfg.cpu_number = 4
     saved = []

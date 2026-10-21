@@ -12,7 +12,13 @@ configuration audits and runnable commands.
 
 ## Current local BO research default
 
-For new AlphaEvolve runs, `task_preset=alphaevolve` now selects the AQ04 joint-TS BO preset and `audited_bo=redesign`. When evolution is selected, the live engine uses the evidence-packet, structured-plan, full-module route copied from the frozen E06 comparison. Use `audited_bo=preserved_evolution` with AQ04 for an authentic-MLEvolve evolution control; use `audited_bo=baseline experiment_preset=gp6` to request the older GP6 setup explicitly. Existing saved runs retain their saved configuration when resumed. The redesign is currently integrated for the AlphaEvolve host evaluator; other task types keep their existing evolution implementation pending a separate adaptation.
+For new AlphaEvolve runs, `task_preset=alphaevolve` selects Xixian's AQ04
+joint-TS BO preset and the evidence-guided redesigned evolution operation.
+AQ04's parent selector is unchanged. The redesigned route uses completed host
+outcomes, a structured replacement plan, and a complete new candidate module.
+Use `audited_bo=baseline` to select the upstream evolution operation. Existing
+saved runs retain their saved configuration when resumed. Fixed-evaluation ML
+tasks also have a redesigned evolution adapter.
 
 The historical validation table below describes the earlier 2026-09-20 GP6 setup.
 

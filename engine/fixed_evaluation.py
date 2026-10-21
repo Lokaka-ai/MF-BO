@@ -533,7 +533,7 @@ class FixedEvaluation:
                 "helpers_dir": str(Path(self.cfg.workspace_dir) / "helpers"),
                 "timeout": max(.001, min(float(self.cfg.exec.timeout), remaining_seconds))}
 
-    def score(self, node, *, require_submission=True):
+    def score(self, node):
         if self.failed.is_set():
             raise EvaluationError("Shared evaluator failed; no further scores can be admitted")
         with self._lock:
@@ -546,8 +546,7 @@ class FixedEvaluation:
             _run_process([sys.executable, "-m", "engine.fixed_evaluation", "score", "--protocol", str(self.directory),
                           "--predictions", str(output / "validation.csv"), "--submission",
                           str(Path(self.cfg.workspace_dir) / "submission" / f"submission_{node.id}.csv"),
-                          "--result", str(result_path), *( [] if require_submission else ["--validation-only"])],
-                         timeout=float(self.cfg.evaluation.score_timeout_seconds),
+                          "--result", str(result_path)], timeout=float(self.cfg.evaluation.score_timeout_seconds),
                          log_path=result_path.with_suffix(".log"))
             result = _json(result_path)
             if type(result.get("valid")) is not bool:
@@ -564,7 +563,7 @@ class FixedEvaluation:
         return result
 
 
-def score_files(directory, predictions, submission=None):
+def score_files(directory, predictions, submission):
     spec = _json(directory / "protocol.json")
     # Private reference failures are infrastructure errors, not candidate bugs.
     truth = _read_table(directory / "truth.csv")
@@ -572,8 +571,7 @@ def score_files(directory, predictions, submission=None):
     y = truth[spec["truth_columns"]].to_numpy()
     try:
         p = align_predictions(predictions, truth, spec)
-        if submission is not None:
-            align_predictions(submission, template, spec)
+        align_predictions(submission, template, spec)
         score = compute_metric(y, p, spec["metric"])
         if not math.isfinite(score):
             raise InvalidPrediction("Metric is undefined for these predictions")
@@ -606,11 +604,9 @@ def finalize_submission(cfg, journal=None):
         temp = target.with_suffix(".csv.tmp")
         shutil.copyfile(source, temp)
         temp.replace(target)
-    final_record = {"node_id": best.id, "protocol_id": state["protocol_id"],
-                    "metric": best.metric.value, "maximize": best.metric.maximize,
-                    "source": str(source), "submission": str(workspace / "best_submission/submission.csv"),
-                    "selection": "best_fixed_evaluated_node"}
-    _write_json(Path(cfg.log_dir) / "final_submission.json", final_record)
+    _write_json(Path(cfg.log_dir) / "final_submission.json", {"node_id": best.id, "protocol_id": state["protocol_id"],
+                "metric": best.metric.value, "maximize": best.metric.maximize, "source": str(source),
+                "submission": str(workspace / "best_submission/submission.csv"), "selection": "best_fixed_evaluated_node"})
     return best
 
 
@@ -623,21 +619,16 @@ def adapter_main(prepare):
     p.add_argument("--output-dir", required=True)
     p.add_argument("--seed", type=int, required=True)
     s = sub.add_parser("score")
-    for name in ("protocol", "predictions", "result"):
+    for name in ("protocol", "predictions", "submission", "result"):
         s.add_argument("--" + name, required=True)
-    s.add_argument("--submission")
-    s.add_argument("--validation-only", action="store_true")
     f = sub.add_parser("finalize")
     f.add_argument("--run-info", required=True)
     args = parser.parse_args()
     if args.command == "prepare":
         prepare(Path(args.data_dir), Path(args.output_dir), args.seed)
     elif args.command == "score":
-        if not args.validation_only and not args.submission:
-            parser.error("Full scoring requires --submission")
-        result = score_files(Path(args.protocol), Path(args.predictions),
-                             None if args.validation_only else Path(args.submission))
-        if result["valid"] and not args.validation_only:
+        result = score_files(Path(args.protocol), Path(args.predictions), Path(args.submission))
+        if result["valid"]:
             snapshot = Path(args.result).with_suffix(".submission.csv")
             snapshot.parent.mkdir(parents=True, exist_ok=True)
             shutil.copyfile(args.submission, snapshot)

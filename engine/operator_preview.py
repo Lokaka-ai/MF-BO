@@ -152,8 +152,6 @@ def execute_operator_preview(agent, parent_node, preview: OperatorPreview, init_
     if preview.topk_triggered:
         parent_node._topk_triggered = True
     if operator == "draft":
-        if preview.reason == "audited_representation_rewrite":
-            return draft_agent.run(agent, init_solution_path=init_solution_path, fresh_representation=True)
         return draft_agent.run(agent, init_solution_path=init_solution_path)
     if operator == "aggregation":
         return aggregation_agent.run(agent, mode="node", parent_node=parent_node)

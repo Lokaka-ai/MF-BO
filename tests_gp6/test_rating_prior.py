@@ -421,7 +421,7 @@ class TestRatingRuntime(unittest.TestCase):
                 r.root_draft_state['rating_bo_decision_count']=7
                 r._persist_root_state(a)
                 saved=copy.deepcopy(r.root_draft_state)
-                restored=NS(cfg=c,acfg=c.agent,scfg=c.agent.search,metric_maximize=True,
+                restored=NS(acfg=c.agent,scfg=c.agent.search,metric_maximize=True,
                             journal=NS(nodes=[root,child],parent_selector_state=saved))
                 rr=Runtime(c);rr.bind_agent(restored,resuming=True)
             self.assertEqual(rr.root_draft_state['rating_bo_decision_count'],7)

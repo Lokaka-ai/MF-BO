@@ -1,8 +1,9 @@
 # BO Evolve — redesigned evolution only (2026-10-21)
 
-This independent source repository packages Xixian's MLEvolve-based AQ04 Bayesian
-optimization engine and its existing agent workflow, with our evidence-guided
-redesigned evolution operation selected. Candidate evaluation uses the full
+This independent source repository packages Xixian's MLEvolve-based Bayesian
+optimization engine from `ZeroKnighting/EvolveFold` `xixian/dev` at `ced7bb5a54e91e3ea6236b871f9fcd27027fb493`,
+including his AQ04 selector and fixed ML evaluation. The sole added search
+operation is our evidence-guided redesigned evolution. Candidate evaluation uses the full
 training set provided by the prepared task protocol. The fidelity scheduler,
 its configuration, calibration tools and prompts are absent.
 
@@ -15,6 +16,11 @@ a complete new program rather than patching the parent. AlphaEvolve uses
 `agents/redesign_agent.py`; fixed-evaluation ML tasks use
 `agents/mle_redesign_agent.py`. The original upstream README is preserved in
 `docs/UPSTREAM_README.md`.
+
+The AQ04 selector and fixed evaluator are byte-identical to that upstream
+commit. No frontier, elite, code-kernel, portfolio or multi-fidelity variant is
+included. The redesign flag changes evolution and its stagnation trigger; it
+does not replace AQ04's parent-selection policy.
 
 ## ML-E Bench Lite use
 

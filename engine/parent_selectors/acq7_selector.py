@@ -50,35 +50,6 @@ class Acq7Selector(Branch7Selector):
             rng.bit_generator.state = copy.deepcopy(self.rng_state)
         return rng
 
-    def acquire(self, joint, keys, incumbent, acquisition_started):
-        mean, covariance = joint["mean"], joint["latent_covariance"]
-        rng, pre, post = None, None, None
-        kind = self.config.acquisition_type
-        if kind == "joint_ts":
-            rng = self._local_rng()
-            pre = copy.deepcopy(rng.bit_generator.state)
-            values, acq_details = joint_thompson(mean, covariance, rng, joint["latent_square_root"])
-            post = copy.deepcopy(rng.bit_generator.state)
-            chosen = min(range(len(keys)), key=lambda i: (-float(values[i]), tuple(keys[i])))
-            acq_details.update(rng_pre=pre, rng_post=post, sample=values.tolist(),
-                official_draw_index=self.accepted_draw_index + 1 if acq_details["draw"] else None)
-        else:
-            if kind == "retained_outcome_kg" and incumbent is None:
-                raise Study7Error("RO-KG has no committed valid incumbent")
-            values, acq_details = knowledge_gradient(mean, covariance, joint["noise_variance"],
-                incumbent=incumbent if kind == "retained_outcome_kg" else None,
-                max_seconds=self.config.max_acquisition_seconds - (time.perf_counter() - acquisition_started))
-            chosen = min(range(len(keys)), key=lambda i: (-float(values[i]), -float(mean[i]), tuple(keys[i])))
-            acq_details["selected_envelope"] = selected_envelope(mean, covariance,
-                joint["noise_variance"], chosen, incumbent if kind == "retained_outcome_kg" else None)
-        return values, acq_details, chosen, pre, post
-
-    def predict_joint(self, rows, scale):
-        return self.gp.predict_joint(rows, scale)
-
-    def decision_metadata(self):
-        return {}
-
     @log_fatal
     def select(self, agent, options):
         started = time.perf_counter()
@@ -97,7 +68,7 @@ class Acq7Selector(Branch7Selector):
             row["option_key"] = key
         scale = self.state.reference["s0"]
         acquisition_started = time.perf_counter()
-        joint = self.predict_joint(rows, scale)
+        joint = self.gp.predict_joint(rows, scale)
         mean, covariance = joint["mean"], joint["latent_covariance"]
         latent, predictive = joint["latent_sd"], joint["predictive_sd"]
         parent = np.asarray([row["parent_utility"] for row in rows])
@@ -108,8 +79,25 @@ class Acq7Selector(Branch7Selector):
                                  if row.operator == "aggregation" and row.valid and closed(row)]
         incumbent_row = max(candidates_incumbent, key=lambda row: row.child_utility, default=None)
         incumbent = float(incumbent_row.child_utility) if incumbent_row is not None else None
+        rng, pre, post = None, None, None
         kind = self.config.acquisition_type
-        values, acq_details, chosen, pre, post = self.acquire(joint, keys, incumbent, acquisition_started)
+        if kind == "joint_ts":
+            rng = self._local_rng()
+            pre = copy.deepcopy(rng.bit_generator.state)
+            values, acq_details = joint_thompson(mean, covariance, rng, joint["latent_square_root"])
+            post = copy.deepcopy(rng.bit_generator.state)
+            chosen = min(range(len(options)), key=lambda i: (-float(values[i]), tuple(keys[i])))
+            acq_details.update(rng_pre=pre, rng_post=post, sample=values.tolist(),
+                official_draw_index=self.accepted_draw_index + 1 if acq_details["draw"] else None)
+        else:
+            if kind == "retained_outcome_kg" and incumbent is None:
+                raise Study7Error("RO-KG has no committed valid incumbent")
+            values, acq_details = knowledge_gradient(mean, covariance, joint["noise_variance"],
+                incumbent=incumbent if kind == "retained_outcome_kg" else None,
+                max_seconds=self.config.max_acquisition_seconds - (time.perf_counter() - acquisition_started))
+            chosen = min(range(len(options)), key=lambda i: (-float(values[i]), -float(mean[i]), tuple(keys[i])))
+            acq_details["selected_envelope"] = selected_envelope(mean, covariance,
+                joint["noise_variance"], chosen, incumbent if kind == "retained_outcome_kg" else None)
         acquisition_seconds = time.perf_counter() - acquisition_started
         if acquisition_seconds > self.config.max_acquisition_seconds:
             raise Study7Error("blocked_numerical: acquisition wall-time limit")
@@ -158,7 +146,7 @@ class Acq7Selector(Branch7Selector):
                     for name in sorted(set(names))]}
         choose = lambda value: min(range(len(options)), key=lambda i: (-float(value[i]), tuple(keys[i])))
         mean_best, parent_best, ucb_best = choose(mean), choose(parent), choose(mean + 1.5 * latent)
-        header = {**self.decision_metadata(), "method_id": self.config.method_id, "decision_id": decision.decision_id,
+        header = {"method_id": self.config.method_id, "decision_id": decision.decision_id,
             "model_version": self.gp.model_version, "schema": self.config.schema,
             "contract_hash": digest(self.contract()), "timestamp": decision.timestamp,
             "snapshot_revision": revision, "active_time": max(0., time.time() - agent.start_time),
@@ -169,7 +157,7 @@ class Acq7Selector(Branch7Selector):
             "segment_active_offset": os.environ.get("MLEVOLVE_SEGMENT_ACTIVE_OFFSET", "0"),
             "gpu_lease": os.environ.get("CUDA_VISIBLE_DEVICES"),
             "cpu_affinity": sorted(os.sched_getaffinity(0)), "selection_thread": threading.current_thread().name,
-            "acquisition_kind": acq_details.get("policy", kind), "acquisition_seconds": acquisition_seconds,
+            "acquisition_kind": kind, "acquisition_seconds": acquisition_seconds,
             "selection_compute_seconds": time.perf_counter() - started,
             "candidate_order": keys, "candidate_order_hash": digest(keys), "candidate_count": len(rows),
             "joint_posterior_hash": joint["posterior_hash"], "joint_numerical": joint["diagnostics"],
@@ -200,8 +188,8 @@ class Acq7Selector(Branch7Selector):
         payloads, self.last_prediction_details = [], {}
         for i, option in enumerate(options):
             details = {**joint["details"][i], "method_id": self.config.method_id,
-                "acquisition_kind": acq_details.get("policy", kind), "acquisition_score_units": acq_details.get("acquisition_score_units", "child_utility" if kind == "joint_ts" else "utility_value_of_information"),
-                "is_exact_gp_posterior": joint.get("exact_gp", True), "uncertainty_used": "predictive_marginal" if acq_details.get("uses_observation_noise") else "latent_full",
+                "acquisition_kind": kind, "acquisition_score_units": "child_utility" if kind == "joint_ts" else "utility_value_of_information",
+                "is_exact_gp_posterior": True, "uncertainty_used": "latent_full",
                 "root_lineage_id": names[i], "branch_kind": self.config.branch_kind,
                 "joint_covariance_hash": joint["diagnostics"]["covariance_hash"]}
             self.last_prediction_details[(option.parent_node_id, option.operator)] = details

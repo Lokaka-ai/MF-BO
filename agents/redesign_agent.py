@@ -13,7 +13,7 @@ from agents.coder import plan_and_code_query
 from agents.planner import build_chat_prompt_for_model
 from agents.triggers import register_node
 from engine.search_node import SearchNode
-from engine.parent_selectors.audited_bo import ordered_closed
+from engine.redesign_evidence import ordered_closed
 
 FIELDS = ('inherited_limitation', 'evidence_node_ids', 'replacement_algorithm',
           'retained_constraints', 'expected_observable_change', 'runtime_plan')

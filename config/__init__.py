@@ -303,7 +303,6 @@ class Config(Hashable):
     study7: Study7Config = field(default_factory=Study7Config)
     branch7: Branch7Options = field(default_factory=Branch7Options)
     acq7: Acq7Options = field(default_factory=Acq7Options)
-    research_bo: str = "baseline"
     audited_bo: str = "baseline"
 
 
@@ -454,6 +453,13 @@ def prep_cfg(cfg: Config):
     # validate the config
     cfg_schema: Config = OmegaConf.structured(Config)
     cfg = OmegaConf.merge(cfg_schema, cfg)
+    if cfg.audited_bo not in {"baseline", "redesign"}:
+        raise ValueError("Only baseline or redesigned evolution is supported")
+    if cfg.audited_bo == "redesign":
+        if cfg.task_type not in {"alphaevolve", "competition"}:
+            raise ValueError("Redesigned evolution requires AlphaEvolve or competition evaluation")
+        if cfg.task_type == "competition" and not cfg.evaluation.enabled:
+            raise ValueError("Competition redesign requires fixed evaluation")
 
     validate_root_draft_config(cfg)
     return cast(Config, cfg)

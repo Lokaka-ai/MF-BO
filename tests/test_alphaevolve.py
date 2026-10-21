@@ -110,16 +110,16 @@ def test_fresh_grader_ignores_candidate_forged_score(tmp_path):
     assert json.loads((tmp_path/"result.json").read_text())["metric"] == pytest.approx(18)
 
 
-def test_task_defaults_select_aq04_redesign_and_preserve_native_agent(monkeypatch):
+def test_task_defaults_preserve_gp6_and_native_agent(monkeypatch):
     from config import _load_cfg
     from omegaconf import OmegaConf
     monkeypatch.setattr(sys, "argv", ["run.py", "task_preset=alphaevolve", "exp_id=max_min_ratio"])
     cfg = _load_cfg()
     base = OmegaConf.load(ROOT/"config/config.yaml")
-    assert cfg.parent_selector.type == "acq7_gp4"
-    assert cfg.bo_parent_selector.model == "acq7_gp4"
-    assert cfg.bo_parent_selector.acquisition.type == "joint_ts"
-    assert cfg.study7.method_id == "AQ04" and cfg.audited_bo == "redesign"
+    assert cfg.parent_selector.type == "gp_child_ucb"
+    assert cfg.bo_parent_selector.model == "gp_matern32"
+    assert cfg.bo_parent_selector.acquisition.beta == 1.5
+    assert cfg.get("audited_bo", "baseline") == "baseline"
     assert cfg.agent.time_limit == 43200
     assert cfg.agent.memory_embedding_device == "cpu" and cfg.agent.search.num_gpus == 0
     assert cfg.agent.initial_drafts == base.agent.initial_drafts == 3

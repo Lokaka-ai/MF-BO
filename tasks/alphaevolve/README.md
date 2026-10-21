@@ -10,15 +10,13 @@ The [2026-09-20 CPU validation report](../../docs/ALPHAEVOLVE_IMPLEMENTATION_AND
 records all 15 successful draft/improve checks, the retained failed attempt,
 configuration audits and runnable commands.
 
-## Current local BO research default
+## Current focus
 
-For new AlphaEvolve runs, `task_preset=alphaevolve` selects Xixian's AQ04
-joint-TS BO preset and the evidence-guided redesigned evolution operation.
-AQ04's parent selector is unchanged. The redesigned route uses completed host
-outcomes, a structured replacement plan, and a complete new candidate module.
-Use `audited_bo=baseline` to select the upstream evolution operation. Existing
-saved runs retain their saved configuration when resumed. Fixed-evaluation ML
-tasks also have a redesigned evolution adapter.
+This repository is intended for ML-E Bench Lite runs through
+`tasks/mlebench_lite/run_bo.py`. The inherited AlphaEvolve package remains for
+source compatibility; `task_preset=alphaevolve` keeps Xixian's upstream GP6
+default and does not select redesigned evolution automatically. Existing saved
+runs retain their saved configuration when resumed.
 
 The historical validation table below describes the earlier 2026-09-20 GP6 setup.
 

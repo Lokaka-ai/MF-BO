@@ -8,14 +8,11 @@ from agents import evolution_agent, redesign_agent
 from config import _load_cfg
 
 
-def test_alphaevolve_aq04_defaults_to_redesign(monkeypatch):
+def test_alphaevolve_keeps_upstream_default(monkeypatch):
     monkeypatch.setattr(sys, 'argv', ['run.py', 'task_preset=alphaevolve', 'exp_id=kissing_number_d11'])
     cfg = _load_cfg()
-    assert cfg.audited_bo == 'redesign'
-    assert cfg.study7.method_id == 'AQ04' and cfg.acq7.enabled
-    monkeypatch.setattr(sys, 'argv', ['run.py', 'task_preset=alphaevolve', 'exp_id=kissing_number_d11',
-                                     'experiment_preset=gp6'])
-    assert _load_cfg().get('audited_bo', 'baseline') == 'baseline'
+    assert cfg.get('audited_bo', 'baseline') == 'baseline'
+    assert cfg.parent_selector.type == 'gp_child_ucb'
 
 
 def test_live_evolution_dispatches_to_frozen_redesign_route(tmp_path, monkeypatch):

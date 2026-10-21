@@ -341,16 +341,13 @@ def _load_cfg(
             else:
                 cfg.data_dir = str(task_root / "repo")
                 cfg.desc_file = str(task_root / "TASK.md")
-        # Current AlphaEvolve research default: the same AQ04 BO used in E06.
-        preset = cli_cfg.pop("experiment_preset", "acq7_aq04_gp4_level15_rating_jts" if task_preset == "alphaevolve" else None)
+        # Keep the upstream AlphaEvolve default. ML-E Bench uses the explicit
+        # AQ04 + redesign launcher in tasks/mlebench_lite/run_bo.py.
+        preset = cli_cfg.pop("experiment_preset", "gp6" if task_preset == "alphaevolve" else None)
         if preset is not None:
             if preset not in {"mlevolve_original", "gp6", "gp6_draft", "halfshrink_ucb", "gp6_global_logei", "agent_selector", "gp7_ancestry_ucb", "gp7_no_ancestry_ucb", "laplacian_anchor_logei", "gp7_long_horizon_ucb", "gp7_short_logei_pibo", "gp7_long_horizon_ucb_pibo", "gp7_short_ucb_pibo", *SEVEN_PRESETS, *BRANCH7_PRESETS, *ACQ7_PRESETS, *ACQ7_EXTENSION_PRESETS, *RATING_ONLY_PRESETS}:
                 raise ValueError("Unknown experiment_preset; use mlevolve_original, gp6, gp6_draft, halfshrink_ucb, gp6_global_logei agent_selector, gp7_ancestry_ucb, gp7_no_ancestry_ucb, laplacian_anchor_logei, gp7_long_horizon_ucb, gp7_short_logei_pibo, gp7_long_horizon_ucb_pibo or gp7_short_ucb_pibo")
             cfg = OmegaConf.merge(cfg, OmegaConf.load(Path(__file__).parent / "experiments" / f"{preset}.yaml"))
-        if (task_preset == "alphaevolve" and preset == "acq7_aq04_gp4_level15_rating_jts"
-                and "audited_bo" not in cli_cfg
-                and not (cli_cfg.get("resume_run_dir") or cfg.get("resume_run_dir"))):
-            cfg.audited_bo = "redesign"
         resume_run_dir = cli_cfg.get("resume_run_dir") or cfg.get("resume_run_dir")
         if resume_run_dir:
             saved_cfg_path = Path(resume_run_dir).resolve() / "logs" / "config.yaml"

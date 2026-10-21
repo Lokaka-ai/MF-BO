@@ -1,4 +1,4 @@
-# BO Evolve — redesigned evolution only (2026-10-21)
+# BO Evolve — ML-E Bench Lite, redesigned evolution (2026-10-21)
 
 This independent source repository packages Xixian's MLEvolve-based Bayesian
 optimization engine from `ZeroKnighting/EvolveFold` `xixian/dev` at `ced7bb5a54e91e3ea6236b871f9fcd27027fb493`,
@@ -12,15 +12,17 @@ aggregation, memory and submission. MLEVHarness determines the legal operation
 for each parent before AQ04 BO selects among the prepared parent options. The
 selected `audited_bo=redesign` route uses the plateau trigger and produces a
 structural replacement plan from completed host-scored attempts. It generates
-a complete new program rather than patching the parent. AlphaEvolve uses
-`agents/redesign_agent.py`; fixed-evaluation ML tasks use
-`agents/mle_redesign_agent.py`. The original upstream README is preserved in
+a complete new program rather than patching the parent. ML-E Bench Lite uses
+`agents/mle_redesign_agent.py`; shared planning helpers remain in
+`agents/redesign_agent.py`. The original upstream README is preserved in
 `docs/UPSTREAM_README.md`.
 
 The AQ04 selector and fixed evaluator are byte-identical to that upstream
 commit. No frontier, elite, code-kernel, portfolio or multi-fidelity variant is
 included. The redesign flag changes evolution and its stagnation trigger; it
-does not replace AQ04's parent-selection policy.
+does not replace AQ04's parent-selection policy. The inherited AlphaEvolve
+package is not the target of this repository's testing; its upstream default
+is unchanged.
 
 ## ML-E Bench Lite use
 

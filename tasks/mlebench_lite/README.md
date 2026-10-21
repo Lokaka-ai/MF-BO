@@ -1,9 +1,16 @@
-# MLE-bench Lite preparation and smoke runs
+# MLE-bench Lite preparation and BO runs
 
 These tools prepare the 22 tasks in `config/mlebench_lite22.txt` with official
 MLE-bench commit `507f92e1138bb6e40dac5c6ee7a6758e6424bf97`, then exercise the
 native MLEvolve workflow. Datasets, run results and local setup records are not
 included in Git.
+
+For the intended AQ04 + redesigned-evolution comparison, prepare one frozen
+protocol with `prepare_fixed_protocol.py`, inspect its split and metric, and use
+`run_bo.py --protocol-dir ... --check-only` before launching. The command and
+evaluation boundary are documented in the repository's top-level `README.md`.
+The short `smoke.py` below exercises the inherited workflow with fixed outer
+evaluation disabled; its output is not a benchmark result for this system.
 
 ## Environment and data
 

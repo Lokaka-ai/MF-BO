@@ -1,0 +1,75 @@
+"""Static shared prompt fragments."""
+
+ROBUSTNESS_GENERALIZATION_STRATEGY = {
+    "💡 Recommendation: Robustness & Generalization Strategy": [
+        "",
+        "**To improve model robustness and generalization on unseen data:**",
+        "",
+        "✅ **Architecture**: Match model inductive bias to data structure (e.g., CNNs/ViTs for spatial grids, Transformers/RNNs for sequences, GNNs/GCNs for graphs/topology)",
+        "✅ **Data Modality**: When the dataset provides multiple modalities, try to use all available modalities, especially those most relevant to the task target.",
+        "✅ **Input Strategy**: Handle variable-length or large-scale inputs via **windowing strategies** or patch-based processing (consider overlap for smoother predictions)",
+        "✅ **Regularization**: Consider using Dropout, Batch/Layer Norm, Weight Decay, or Label Smoothing",
+        "✅ **Loss Function**: Inspect class distribution and adapt loss accordingly (e.g., weighted loss, FocalLoss, or task-specific objectives)",
+        "✅ **Learning Rate**: Consider using adaptive schedules like Cosine Annealing or ReduceLROnPlateau or Warmup with differential rates if needed",
+        "✅ **Data Augmentation**: Apply domain-appropriate augmentation based on data modality (e.g., geometric transforms, masking, mixup)",
+        "✅ **Validation**: Monitor validation metrics strictly and use early stopping to prevent overfitting",
+        "",
+        "⚠️ **Note**:",
+        "Prioritize capturing the intrinsic structure of the data (Inductive Bias) over simply increasing model size.",
+        "",
+    ]
+}
+
+
+def prompt_leakage_prevention():
+    """Data leakage prevention."""
+    return {
+        "🚨 DATA LEAKAGE PREVENTION": [
+            "",
+            "⚠️ **Strict Isolation Principle**: Validation/Test data must remain strictly unseen during training.",
+            "",
+            "✅ **Sequence**: Always **Split Data FIRST**, then apply processing.",
+            "✅ **Stateful Transformations**: Fit all Scalers, Encoders, Imputers, and Tokenizers **ONLY on Training data**, then use `.transform()` on Validation/Test.",
+            "✅ **Feature Engineering**: Calculate global statistics (e.g., mean, variance, vocabulary) solely from the Training set.",
+            "✅ **Target Leakage**: Never use target information (e.g., Target Encoding) from the validation set.",
+            "",
+        ]
+    }
+
+
+def prompt_resp_fmt(agent=None):
+    """Response format for plan + code"""
+    if getattr(agent, "alphaevolve", None):
+        return {"Response format": "Return a brief mathematical optimization plan and one Python code block containing the complete solve(problem, initial, time_budget, seed) candidate module."}
+    if getattr(agent, "autoresearch", None):
+        return {"Response format": "Provide a brief solution plan followed by one Python code block containing the complete candidate module conforming to the host API. The host supplies training, evaluation and checkpoint saving."}
+    if getattr(agent, "fixed_evaluation", None):
+        return {"Response format": "Provide a brief solution plan followed by one Python code block containing the complete runnable solution and both fixed V/test prediction outputs."}
+    return {
+        "Response format": (
+            "Your response should be a brief outline/sketch of your proposed solution in natural language, "
+            "followed by a single markdown code block (wrapped in ```) which implements this solution and prints out the evaluation metric. "
+            "There should be no additional headings or text in your response. Just natural language text followed by a newline and then the markdown code block. "
+        )
+    }
+
+
+def get_internet_clarification(pretrain_model_dir: str = "", agent=None):
+    """Internet access clarification for improve/debug stages."""
+    if getattr(agent, "alphaevolve", None):
+        return ["Use the supplied mathematical problem and initial construction with installed CPU numerical libraries. Published answer downloads and private reference fixtures are outside the task protocol."]
+    if getattr(agent, "autoresearch", None):
+        return ["This is from-scratch language model pretraining. Use the prepared tokenizer/data and installed torch environment; pretrained model weights are outside the task protocol."]
+    lines = [
+        "**⚠️ IMPORTANT: Internet Access During Code Development**",
+        "- The \"no internet access\" restriction mentioned in the task description applies **ONLY to submission evaluation after code generation** (for mle-bench test set).",
+        "- **During code development, you CAN and SHOULD use online resources** such as torch.hub.load(), HuggingFace transformers, timm, etc.",
+    ]
+    if pretrain_model_dir:
+        lines.append(
+            f"- **Model paths under `{pretrain_model_dir}/` are GUARANTEED to exist and be available** — specifically `dinov3_vitl16` (DINOv3) and `google/siglip2-so400m-patch16-256` (Siglip2). You can directly use these exact variants without `Path question`. Prefer the listed variants unless there is a clear reason to use a different one."
+        )
+    lines.append(
+        "- **Do NOT question internet access concerns - all standard ML libraries and pretrained models are available during development."
+    )
+    return lines

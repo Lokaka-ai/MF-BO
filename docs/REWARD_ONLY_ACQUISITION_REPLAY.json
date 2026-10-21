@@ -1,0 +1,385 @@
+{
+  "by_temperature": {
+    "0.00": {
+      "decisions": 472,
+      "factual_matches": 133,
+      "historical_agreement_rate": 0.3961864406779661,
+      "max_candidate_gain_contribution_scaled": 5.989672418274084,
+      "max_parent_utility_rate": 0.809322033898305,
+      "max_selected_abs_gain_contribution_scaled": 1.0043350734363192,
+      "mean_candidate_count": 32.61652542372882,
+      "mean_unique_choices_across_stability_seeds": 1.7817796610169492,
+      "median_parent_utility_sacrifice_scaled": 0.0,
+      "median_stability_modal_share_at_production_temperature": 1.0,
+      "p90_parent_utility_sacrifice_scaled": 0.01613881687869887,
+      "p90_selected_abs_gain_contribution_scaled": 0.37589505042920746,
+      "p99_max_candidate_abs_gain_contribution_scaled": 21.316223179401216,
+      "p99_max_candidate_gain_contribution_scaled": 3.128242598253612,
+      "p99_selected_abs_gain_contribution_scaled": 0.8045776553055152,
+      "positive_gain_rate_when_factual_match": 0.3007518796992481,
+      "posterior_mean_agreement_rate": 1.0,
+      "runs": 28
+    },
+    "0.25": {
+      "decisions": 472,
+      "factual_matches": 123,
+      "historical_agreement_rate": 0.3644067796610169,
+      "max_candidate_gain_contribution_scaled": 5.180144633972394,
+      "max_parent_utility_rate": 0.7711864406779662,
+      "max_selected_abs_gain_contribution_scaled": 3.1591773027457815,
+      "mean_candidate_count": 32.61652542372882,
+      "mean_unique_choices_across_stability_seeds": 1.7817796610169492,
+      "median_parent_utility_sacrifice_scaled": 0.0,
+      "median_stability_modal_share_at_production_temperature": 1.0,
+      "p90_parent_utility_sacrifice_scaled": 0.017553011797035552,
+      "p90_selected_abs_gain_contribution_scaled": 0.387604857697405,
+      "p99_max_candidate_abs_gain_contribution_scaled": 21.277072297838394,
+      "p99_max_candidate_gain_contribution_scaled": 3.549431253421232,
+      "p99_selected_abs_gain_contribution_scaled": 1.5036482860112776,
+      "positive_gain_rate_when_factual_match": 0.3252032520325203,
+      "posterior_mean_agreement_rate": 0.8495762711864406,
+      "runs": 28
+    },
+    "0.50": {
+      "decisions": 472,
+      "factual_matches": 119,
+      "historical_agreement_rate": 0.3538135593220339,
+      "max_candidate_gain_contribution_scaled": 6.983651556782796,
+      "max_parent_utility_rate": 0.7245762711864406,
+      "max_selected_abs_gain_contribution_scaled": 6.983651556782796,
+      "mean_candidate_count": 32.61652542372882,
+      "mean_unique_choices_across_stability_seeds": 1.7817796610169492,
+      "median_parent_utility_sacrifice_scaled": 0.0,
+      "median_stability_modal_share_at_production_temperature": 1.0,
+      "p90_parent_utility_sacrifice_scaled": 0.058318463463906525,
+      "p90_selected_abs_gain_contribution_scaled": 0.41754234123341255,
+      "p99_max_candidate_abs_gain_contribution_scaled": 21.561373528666646,
+      "p99_max_candidate_gain_contribution_scaled": 5.57193414063521,
+      "p99_selected_abs_gain_contribution_scaled": 2.982214805189411,
+      "positive_gain_rate_when_factual_match": 0.33613445378151263,
+      "posterior_mean_agreement_rate": 0.7711864406779662,
+      "runs": 28
+    },
+    "1.00": {
+      "decisions": 472,
+      "factual_matches": 111,
+      "historical_agreement_rate": 0.3326271186440678,
+      "max_candidate_gain_contribution_scaled": 16.411007810883355,
+      "max_parent_utility_rate": 0.6313559322033898,
+      "max_selected_abs_gain_contribution_scaled": 14.63260006485683,
+      "mean_candidate_count": 32.61652542372882,
+      "mean_unique_choices_across_stability_seeds": 1.7817796610169492,
+      "median_parent_utility_sacrifice_scaled": 0.0,
+      "median_stability_modal_share_at_production_temperature": 1.0,
+      "p90_parent_utility_sacrifice_scaled": 0.24433571331296253,
+      "p90_selected_abs_gain_contribution_scaled": 0.7800235433572994,
+      "p99_max_candidate_abs_gain_contribution_scaled": 26.785068913172523,
+      "p99_max_candidate_gain_contribution_scaled": 12.327385999934476,
+      "p99_selected_abs_gain_contribution_scaled": 8.439398759740948,
+      "positive_gain_rate_when_factual_match": 0.36036036036036034,
+      "posterior_mean_agreement_rate": 0.6546610169491526,
+      "runs": 28
+    }
+  },
+  "production_temperature": 0.25,
+  "replay_errors": 0,
+  "run_count": 42,
+  "run_summaries": [
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 24,
+      "run": "20260904_041734_aerial-cactus-identification_8h",
+      "task": "01_aerial-cactus-identification"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 0,
+      "run": "20260904_041722_aptos2019-blindness-detection_8h",
+      "task": "02_aptos2019-blindness-detection"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 0,
+      "run": "20260904_041716_denoising-dirty-documents_8h",
+      "task": "03_denoising-dirty-documents"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 60,
+      "run": "20260904_041750_detecting-insults-in-social-commentary_8h",
+      "task": "04_detecting-insults-in-social-commentary"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 27,
+      "run": "20260904_041654_dog-breed-identification_8h",
+      "task": "05_dog-breed-identification"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 40,
+      "run": "20260904_041748_dogs-vs-cats-redux-kernels-edition_8h",
+      "task": "06_dogs-vs-cats-redux-kernels-edition"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 3,
+      "run": "20260904_041723_histopathologic-cancer-detection_8h",
+      "task": "07_histopathologic-cancer-detection"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 1,
+      "run": "20260904_041723_jigsaw-toxic-comment-classification-challenge_8h",
+      "task": "08_jigsaw-toxic-comment-classification-challenge"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 22,
+      "run": "20260904_041645_leaf-classification_8h",
+      "task": "09_leaf-classification"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 65,
+      "run": "20260904_040802_mlsp-2013-birds_8h",
+      "task": "10_mlsp-2013-birds"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 7,
+      "run": "20260904_041612_new-york-city-taxi-fare-prediction_8h",
+      "task": "11_new-york-city-taxi-fare-prediction"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 26,
+      "run": "20260904_041602_nomad2018-predict-transparent-conductors_8h",
+      "task": "12_nomad2018-predict-transparent-conductors"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 3,
+      "run": "20260904_041602_plant-pathology-2020-fgvc7_8h",
+      "task": "13_plant-pathology-2020-fgvc7"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 57,
+      "run": "20260904_041608_random-acts-of-pizza_8h",
+      "task": "14_random-acts-of-pizza"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 0,
+      "run": "20260904_041551_ranzcr-clip-catheter-line-classification_8h",
+      "task": "15_ranzcr-clip-catheter-line-classification"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 27,
+      "run": "20260904_041523_spooky-author-identification_8h",
+      "task": "17_spooky-author-identification"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 5,
+      "run": "20260904_041419_tabular-playground-series-dec-2021_8h",
+      "task": "18_tabular-playground-series-dec-2021"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 0,
+      "run": "20260904_041458_tabular-playground-series-may-2022_8h",
+      "task": "19_tabular-playground-series-may-2022"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 0,
+      "run": "20260904_041438_text-normalization-challenge-english-language_8h",
+      "task": "20_text-normalization-challenge-english-language"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 0,
+      "run": "20260904_041404_text-normalization-challenge-russian-language_8h",
+      "task": "21_text-normalization-challenge-russian-language"
+    },
+    {
+      "errors": 0,
+      "method": "BO",
+      "replayed_decisions": 4,
+      "run": "20260904_041346_the-icml-2013-whale-challenge-right-whale-redux_8h",
+      "task": "22_the-icml-2013-whale-challenge-right-whale-redux"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 15,
+      "run": "20260904_041740_aerial-cactus-identification_8h",
+      "task": "01_aerial-cactus-identification"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_041742_aptos2019-blindness-detection_8h",
+      "task": "02_aptos2019-blindness-detection"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_041716_denoising-dirty-documents_8h",
+      "task": "03_denoising-dirty-documents"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 19,
+      "run": "20260904_041802_detecting-insults-in-social-commentary_8h",
+      "task": "04_detecting-insults-in-social-commentary"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 5,
+      "run": "20260904_041740_dog-breed-identification_8h",
+      "task": "05_dog-breed-identification"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 3,
+      "run": "20260904_040719_dogs-vs-cats-redux-kernels-edition_8h",
+      "task": "06_dogs-vs-cats-redux-kernels-edition"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_040719_histopathologic-cancer-detection_8h",
+      "task": "07_histopathologic-cancer-detection"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_041723_jigsaw-toxic-comment-classification-challenge_8h",
+      "task": "08_jigsaw-toxic-comment-classification-challenge"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 15,
+      "run": "20260904_041717_leaf-classification_8h",
+      "task": "09_leaf-classification"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 17,
+      "run": "20260904_041640_mlsp-2013-birds_8h",
+      "task": "10_mlsp-2013-birds"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 5,
+      "run": "20260904_040732_new-york-city-taxi-fare-prediction_8h",
+      "task": "11_new-york-city-taxi-fare-prediction"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 2,
+      "run": "20260904_041631_nomad2018-predict-transparent-conductors_8h",
+      "task": "12_nomad2018-predict-transparent-conductors"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 3,
+      "run": "20260904_041602_plant-pathology-2020-fgvc7_8h",
+      "task": "13_plant-pathology-2020-fgvc7"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 5,
+      "run": "20260904_041602_random-acts-of-pizza_8h",
+      "task": "14_random-acts-of-pizza"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_041600_ranzcr-clip-catheter-line-classification_8h",
+      "task": "15_ranzcr-clip-catheter-line-classification"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 5,
+      "run": "20260904_041523_spooky-author-identification_8h",
+      "task": "17_spooky-author-identification"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_041523_tabular-playground-series-dec-2021_8h",
+      "task": "18_tabular-playground-series-dec-2021"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 5,
+      "run": "20260904_040918_tabular-playground-series-may-2022_8h",
+      "task": "19_tabular-playground-series-may-2022"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_041449_text-normalization-challenge-english-language_8h",
+      "task": "20_text-normalization-challenge-english-language"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 0,
+      "run": "20260904_041417_text-normalization-challenge-russian-language_8h",
+      "task": "21_text-normalization-challenge-russian-language"
+    },
+    {
+      "errors": 0,
+      "method": "Legacy",
+      "replayed_decisions": 2,
+      "run": "20260904_041355_the-icml-2013-whale-challenge-right-whale-redux_8h",
+      "task": "22_the-icml-2013-whale-challenge-right-whale-redux"
+    }
+  ],
+  "runs_root": "/private/tmp/bo42_acq.qpJ3qE/bo-failure-analysis-42/runs",
+  "stability_seeds": 16
+}

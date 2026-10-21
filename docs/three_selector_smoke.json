@@ -1,0 +1,30 @@
+{
+  "kind": "selector_only_synthetic_smoke",
+  "full_agent_or_gpu_test": false,
+  "results": [
+    {
+      "mode": "halfshrink_ucb",
+      "selected_parent": "example-node-1",
+      "selector": "halfshrink_ucb",
+      "root_draft": false,
+      "fallback": false,
+      "provider_call": false
+    },
+    {
+      "mode": "gp6_global_logei",
+      "selected_parent": "example-node-1",
+      "selector": "gp6_global_logei",
+      "root_draft": false,
+      "fallback": false,
+      "provider_call": false
+    },
+    {
+      "mode": "agent_selector",
+      "selected_parent": "example-node-1",
+      "selector": "agent_selector",
+      "root_draft": false,
+      "fallback": false,
+      "provider_call": false
+    }
+  ]
+}

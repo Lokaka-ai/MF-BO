@@ -1,0 +1,38 @@
+# A: exact parent-residual GP, 7D absolute context + normalized primary ancestry.
+# Load with: python run.py experiment_preset=gp7_ancestry_ucb ...
+# Everything outside the selector inherits config/config.yaml and CLI overrides.
+evaluation:
+  enabled: false
+parent_selector:
+  type: gp7_ancestry_logei  # Legacy runtime ID; acquisition.type below selects UCB or LogEI.
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: gp_matern32
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  acquisition:
+    type: child_ucb
+    beta: 1.5  # Same acquisition as GP6: posterior mean + beta * latent std.
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+  gp:
+    length_scale: 1.0
+    amplitude: 1.0
+    noise_std: 0.25
+    operation_correlation: 0.25
+    optimize_after: 8
+    max_optimizer_iterations: 25
+    history_window: 5
+    jitter: 1.0e-8
+    graph:
+      ancestry_decay: 0.5
+      graph_weight: 0.3
+      absolute_mode: auto  # maximize utility; APTOS QWK; minimize -log1p(loss/c0).
+      laplacian_smoothing: 0.3  # B-only; A uses the parent baseline, NOT this center.
+      covariance_ridge: 0.0625  # B-only; A learns its own noise_std.
+      amplitude_cap: 5.0       # B-only; A already bounds fitted amplitude at 5.
+      xi: 0.0

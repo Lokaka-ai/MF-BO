@@ -1,0 +1,237 @@
+# ============================================================
+#  Data & paths
+# ============================================================
+data_dir: null
+dataset_dir: ""  # path to mle-bench dataset root, e.g. /data/mle-bench
+desc_file: null
+goal: null
+eval: null
+exp_name: null
+exp_id: ""
+
+log_dir: ./runs
+log_level: INFO
+workspace_dir: ./runs
+preprocess_data: True
+copy_data: False
+resume_run_dir: null
+resume_elapsed_seconds: 0  # Legacy/manual floor; new journals persist active time automatically
+
+evaluation:
+  enabled: false
+  protocol_dir: null
+  setup_timeout_seconds: 900
+  setup_max_attempts: 0  # 0: DEBUG repairs until success or the setup deadline.
+  score_timeout_seconds: 120
+
+# Resource
+start_cpu_id: 0
+cpu_number: 21
+
+# Model paths
+torch_hub_dir: ""       # path to torch hub cache, e.g. /data/pretrain_models/torch_models
+pretrain_model_dir: ""  # path to pretrained model weights, e.g. /data/pretrain_models
+
+# ============================================================
+#  Code execution
+# ============================================================
+exec:
+  timeout: 32400
+  agent_file_name: runfile.py
+
+# ============================================================
+#  Agent config
+# ============================================================
+agent:
+
+  # --- Basic run params ---
+  steps: 500
+  time_limit: 43200          # 12h
+  initial_drafts: 3
+  seed: 42
+  data_preview: True
+
+  # --- LLM models ---
+  code:
+    model: opencode/muse-spark-1.3-contributor-free
+    temp: 1
+    base_url: "opencode://opencode"  # Native OpenCode CLI
+    api_key: ""    # Uses OpenCode login or OPENCODE_API_KEY
+  feedback:
+    model: opencode/muse-spark-1.3-contributor-free
+    temp: 1
+    base_url: "opencode://opencode"  # Native OpenCode CLI
+    api_key: ""    # Uses OpenCode login or OPENCODE_API_KEY
+
+  # --- Submission check ---
+  check_data_leakage: True
+
+  # --- Code gen mode ---
+  use_diff_mode: True                 # Multi-Mode Codegen
+  use_stepwise_generation: True       # Multi-Mode Codegen
+
+  # --- Triggered-action master switches (ablation use) ---
+  use_evolution: True                # intra-branch evolution on stagnation
+  use_fusion: True                   # cross-branch fusion on stagnation (>=6h)
+  use_aggregation: True              # multi-branch aggregation at root
+
+  # --- Branch strategy ---
+  fusion_vs_evolution_prob: 0.3
+  branch_fusion_trigger_prob: 1.0
+  max_fusion_drafts: 2
+
+  # --- Global memory ---
+  use_global_memory: True
+  memory_similarity_threshold: 0.7
+  memory_embedding_device: cuda
+  memory_embedding_model_path: "BAAI/bge-base-en-v1.5"  # HuggingFace model name or local path
+
+  # --------------------------------------------------------
+  #  Search tree params
+  # --------------------------------------------------------
+  search:
+    # Parallel & resources
+    parallel_search_num: 3
+    num_gpus: 1
+
+    # Node expansion limits
+    num_drafts: 5
+    num_bugs: 1
+    num_improves: 3
+    topk_max_improves: 10
+
+    # Debug depth
+    max_debug_depth: 20
+    back_debug_depth: 3
+    debug_prob: 1
+
+    # Improvement criteria
+    metric_improvement_threshold: 0.0001
+    max_improve_failure: 3
+
+    # Stagnation detection
+    branch_stagnation_threshold: 3
+    topk_stagnation_threshold: 6
+    stagnation_window: 4
+    top_candidates_size: 20
+
+    # Explore-exploit soft switch
+    explore_switch_start: 0.5
+    explore_switch_end: 0.7
+    min_exploration_weight: 0.2       # Top-K enabled
+
+    # Top-K node selection
+    topk_early_k: 5
+    topk_early_max_per_branch: 3
+    topk_late_k: 3
+    topk_late_max_per_branch: 2
+
+    # Force backprop
+    force_backprop_late_threshold: 0.80
+    force_backprop_late_prob: 0.5
+    force_backprop_mid_threshold: 0.4
+    force_backprop_mid_modulo: 3
+    recent_best_window: 4
+
+    # Multi-branch fusion conditions
+    fusion_min_time_hours: 6
+    fusion_max_time_hours: 10
+    fusion_min_successful_nodes: 2
+    fusion_min_branches: 2
+
+    # Stagnation detection master switch (ablation: set False for vanilla MCTS baseline)
+    use_stagnation_detection: True
+
+  # --------------------------------------------------------
+  #  Exploration constant decay
+  # --------------------------------------------------------
+  decay:
+    exploration_constant: 1.414
+    lower_bound: 0.5
+    alpha: 0.01
+    phase_ratios: [0.3, 0.7]
+
+# ============================================================
+#  Cold-start knowledge
+# ============================================================
+coldstart:
+  use_coldstart: True                 # Cold-start KB enabled
+  task_json_path: "engine/coldstart/competition_tag_classified.json"
+  model_json_path: "engine/coldstart/models_guidance_classified.json"
+  description: ""
+
+# ============================================================
+#  Phase 1 parent/operator selector (current production BO defaults)
+# ============================================================
+parent_selector:
+  prefer_unoccupied_parents: true
+  # progressive_mcgs | bnvs_mean_greedy | bnvs_ts | bnvs_ts_local
+  type: bnvs_ts
+  decision_scope: all_normal_steps  # root_only | all_normal_steps
+  include_root_draft: false
+
+bo_parent_selector:
+  model: conjugate_bayesian_linear
+  # BNVS is prior-backed and ignores these legacy hard-threshold fields.
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+
+  features:
+    include_mcgs_statistics: true
+    include_branch_history: true
+    include_reference_summary: true
+
+  acquisition:
+    type: thompson
+    beta: 0.0  # unused by the default BNVS-TS selector
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+    cost_power: 1.0
+    initial_gain_trust: 0.10
+    max_gain_trust: 0.25
+    full_gain_trust_valid_transitions: 30
+    thompson_temperature: 0.35
+    anneal_remaining_fraction: 0.10
+
+  value_model:
+    target: incumbent_h1
+    horizon: 1
+    feature_set: exact10
+    prior_precision: 4.0
+    intercept_precision: 0.25
+    prior_shape: 2.0
+    prior_scale: 1.0
+
+  # Retained only for the legacy reward_only_bayesian_ts ablation.
+  reward_model:
+    prior_precision: 4.0
+    intercept_precision: 0.25
+    prior_shape: 2.0
+    prior_scale: 1.0
+    uncertainty_multiplier: 2.0
+    uncertainty_floor: 0.10
+
+  fallback:
+    type: progressive_mcgs
+
+  cost:
+    default_total_wall_time_sec: 600.0
+
+  # Opt-in generic post-run rating + piBO prior. Disabled keeps legacy feedback.
+  agent_rating:
+    enabled: false
+    beta_prior: 25.0  # independent of acquisition.beta (UCB diagnostic)
+
+  # Used only by experiment_preset=gp6 / gp6_draft.
+  gp:
+    length_scale: 1.0
+    amplitude: 1.0
+    noise_std: 0.25
+    operation_correlation: 0.25
+    optimize_after: 8
+    max_optimizer_iterations: 25
+    history_window: 5
+    jitter: 1.0e-8

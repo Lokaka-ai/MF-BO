@@ -1,0 +1,16 @@
+# Original MLEvolve non-BO search, using the repository's unmodified soft-switch
+# MCGS/Top-K path and direct continuation. Load with experiment_preset=mlevolve_original.
+# Original source: InternScience/MLEvolve, commit 7d8403c899c40f01941c0429f1c4ef51e82ae41c.
+# This preset changes only search selection. Task-specific adaptations (including
+# nanoGPT's fixed training/scoring protocol) and resources are shared with the BO arms.
+# It is a task-adapted original-search control, not a full MLE-bench paper rerun.
+parent_selector:
+  type: legacy_original
+  decision_scope: root_only
+  include_root_draft: false
+bo_parent_selector:
+  # Required compatibility field; legacy_original never uses a BO acquisition
+  # or surrogate prediction to choose a parent.
+  model: conjugate_bayesian_linear
+  agent_rating:
+    enabled: false

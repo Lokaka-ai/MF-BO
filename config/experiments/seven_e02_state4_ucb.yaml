@@ -1,0 +1,27 @@
+# EvolveFold_Seven_Experiments_Codex_Spec_zh.md v1.0; fixed first seed block.
+evaluation:
+  enabled: false
+parent_selector:
+  type: study7_state4_ucb
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: study7_state4_gp
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  agent_rating:
+    enabled: false
+  acquisition:
+    type: child_ucb
+    beta: 1.5
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+study7:
+  method_id: E02
+  ancestor:
+    enabled: false
+  rating:
+    enabled: false

@@ -1,0 +1,38 @@
+# B: fixed Laplacian center + bounded RMS-scaled kernel uncertainty (not GP mean).
+# Load with: python run.py experiment_preset=laplacian_anchor_logei ...
+# Selector type, GP optimizer budget and acquisition differ from the A preset.
+evaluation:
+  enabled: false
+parent_selector:
+  type: laplacian_anchor_logei
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: gp_matern32  # Shared runtime plumbing, not a claim of an exact GP posterior.
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  acquisition:
+    type: logei
+    beta: 1.5  # UCB diagnostic ONLY.
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+  gp:
+    length_scale: 1.0
+    amplitude: 1.0
+    noise_std: 0.25
+    operation_correlation: 0.25
+    optimize_after: 8
+    max_optimizer_iterations: 0  # Required: no mean/variance GP training or MAP fit.
+    history_window: 5
+    jitter: 1.0e-8
+    graph:
+      ancestry_decay: 0.5
+      graph_weight: 0.3
+      absolute_mode: auto
+      laplacian_smoothing: 0.3
+      covariance_ridge: 0.0625
+      amplitude_cap: 5.0
+      xi: 0.0

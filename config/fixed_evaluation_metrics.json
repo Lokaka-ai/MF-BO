@@ -1,0 +1,235 @@
+{
+  "aerial-cactus-identification": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "aptos2019-blindness-detection": {
+    "metric": {
+      "name": "quadratic_kappa",
+      "maximize": true
+    },
+    "id_columns": [
+      "id_code"
+    ],
+    "metadata_columns": []
+  },
+  "denoising-dirty-documents": {
+    "metric": {
+      "name": "rmse",
+      "maximize": false
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "detecting-insults-in-social-commentary": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "Comment"
+    ],
+    "metadata_columns": [
+      "Date"
+    ]
+  },
+  "dog-breed-identification": {
+    "metric": {
+      "name": "log_loss",
+      "maximize": false
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "dogs-vs-cats-redux-kernels-edition": {
+    "metric": {
+      "name": "log_loss",
+      "maximize": false
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "histopathologic-cancer-detection": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "jigsaw-toxic-comment-classification-challenge": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "macro"
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "leaf-classification": {
+    "metric": {
+      "name": "log_loss",
+      "maximize": false
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "mlsp-2013-birds": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "Id"
+    ],
+    "metadata_columns": []
+  },
+  "new-york-city-taxi-fare-prediction": {
+    "metric": {
+      "name": "rmse",
+      "maximize": false
+    },
+    "id_columns": [
+      "key"
+    ],
+    "metadata_columns": []
+  },
+  "nomad2018-predict-transparent-conductors": {
+    "metric": {
+      "name": "rmsle",
+      "maximize": false
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "plant-pathology-2020-fgvc7": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "macro"
+    },
+    "id_columns": [
+      "image_id"
+    ],
+    "metadata_columns": []
+  },
+  "random-acts-of-pizza": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "request_id"
+    ],
+    "metadata_columns": []
+  },
+  "ranzcr-clip-catheter-line-classification": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "macro"
+    },
+    "id_columns": [
+      "StudyInstanceUID"
+    ],
+    "metadata_columns": []
+  },
+  "siim-isic-melanoma-classification": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "image_name"
+    ],
+    "metadata_columns": []
+  },
+  "spooky-author-identification": {
+    "metric": {
+      "name": "log_loss",
+      "maximize": false
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "tabular-playground-series-dec-2021": {
+    "metric": {
+      "name": "accuracy",
+      "maximize": true
+    },
+    "id_columns": [
+      "Id"
+    ],
+    "metadata_columns": []
+  },
+  "tabular-playground-series-may-2022": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "text-normalization-challenge-english-language": {
+    "metric": {
+      "name": "accuracy",
+      "maximize": true
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "text-normalization-challenge-russian-language": {
+    "metric": {
+      "name": "accuracy",
+      "maximize": true
+    },
+    "id_columns": [
+      "id"
+    ],
+    "metadata_columns": []
+  },
+  "the-icml-2013-whale-challenge-right-whale-redux": {
+    "metric": {
+      "name": "roc_auc",
+      "maximize": true,
+      "average": "micro"
+    },
+    "id_columns": [
+      "clip"
+    ],
+    "metadata_columns": []
+  }
+}

@@ -1,0 +1,32 @@
+# Branch7 v1.0; one preregistered arm. Acquisition coefficient remains 1.5.
+evaluation:
+  enabled: false
+parent_selector:
+  type: branch7_gp6_ucb
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: branch7_gp6
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  agent_rating:
+    enabled: false
+  acquisition:
+    type: child_ucb
+    beta: 1.5
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+study7:
+  method_id: BR01
+  schema: branch7_gp6_v1
+  ancestor:
+    enabled: false
+  rating:
+    enabled: false
+branch7:
+  enabled: true
+  branch_prior_std: 1.5
+  mapping_version: root_lineage_primary_v1

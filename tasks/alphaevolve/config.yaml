@@ -1,0 +1,16 @@
+# Inherit the native mlebench_lite agent settings and the existing GP6 preset.
+# Only domain/resource adaptations are specified here. Production retains
+# 3 initial drafts, 3 workers, 500 steps, memory, review, diff/stepwise coding.
+task_type: alphaevolve
+preprocess_data: false
+copy_data: true
+use_grading_server: false
+evaluation:
+  enabled: false
+agent:
+  time_limit: 43200
+  memory_embedding_device: cpu
+  search:
+    num_gpus: 0
+coldstart:
+  use_coldstart: false  # The coldstart database only contains pretrained ML models.

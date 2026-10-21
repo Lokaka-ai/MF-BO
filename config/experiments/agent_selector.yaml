@@ -1,0 +1,22 @@
+# Codex + configured provider picks one member of the SAME legal option pool.
+# No GP, linear BO, MCGS selection or automatic algorithm fallback.
+evaluation:
+  enabled: false
+parent_selector:
+  type: agent_selector
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: none
+agent_parent_selector:
+  model: opencode/muse-spark-1.3-contributor-free
+  base_url: opencode://opencode
+  reasoning_effort: medium
+  timeout_seconds: 120
+  max_attempts: 2
+  retry_delay_seconds: 3.0
+  prompt_file: agents/prompts/parent_selector.md
+  max_prompt_chars: 60000
+  code_chars_per_node: 1800
+  text_chars_per_node: 900
+  recent_outcomes: 10

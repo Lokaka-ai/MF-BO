@@ -1,0 +1,24 @@
+# Native preset: python run.py experiment_preset=gp6_global_logei ...
+# The six GP6 inputs, kernel fit, code/feedback models and budgets stay unchanged.
+evaluation:
+  enabled: false
+parent_selector:
+  type: gp6_global_logei
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: gp_matern32
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  acquisition:
+    type: child_ucb  # native GP family entry; actual ranking below
+    beta: 1.5       # used by HalfShrink; only UCB diagnostic for LogEI
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+  gp:
+    variant:
+      shrink: 1.0
+      acquisition: logei

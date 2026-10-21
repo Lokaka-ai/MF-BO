@@ -149,6 +149,9 @@ class AgentSearch:
             result_parse_agent.determine_metric_direction(self)
         self.phase1_runtime = Phase1SelectorRuntime(cfg)
         self.phase1_runtime.bind_agent(self, resuming=is_resume)
+        if (self.fixed_evaluation and self.fixed_evaluation.multifidelity_mode == "reset"
+                and self.fixed_evaluation.multifidelity_phase == "full"):
+            self.phase1_runtime.study7_selector.full_training_only = True
         if is_resume and not self.phase1_runtime.managed_decisions:
             dropped = self.phase1_runtime.transition_store.admit_child_ids(
                 {node.id for node in self.journal.nodes}

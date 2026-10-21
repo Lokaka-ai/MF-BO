@@ -399,8 +399,16 @@ class FixedEvaluation:
     @classmethod
     def prepare_or_load(cls, cfg, task_desc, journal):
         from omegaconf import OmegaConf
+        from engine.multifidelity import MODES
         is_resume = bool(journal.nodes)
         state = getattr(journal, "evaluation_state", None)
+        mode = getattr(cfg.evaluation, "multifidelity_mode", None)
+        if mode is not None and (mode not in MODES or not cfg.evaluation.enabled
+                                 or str(cfg.parent_selector.type) != "acq7_gp4"
+                                 or str(cfg.study7.method_id) != "AQ04"):
+            raise EvaluationError("Multi-fidelity requires fixed evaluation and AQ04; choose carry_over or reset")
+        if state and state.get("multifidelity_mode") != mode:
+            raise EvaluationError("Resume multi-fidelity mode differs from admitted journal")
         if is_resume and not state:
             raise EvaluationError("Cannot add fixed evaluation to a legacy checkpoint; start a new search")
         if state and state.get("failure"):
@@ -443,6 +451,9 @@ class FixedEvaluation:
                     result = node.evaluation_result or {}
                     if not result.get("valid") or result.get("metric") != node.metric.value or node.metric.maximize != spec["metric"]["maximize"]:
                         raise EvaluationError("Checkpoint metric is not the admitted evaluator result")
+                    if mode and (node.training_fraction not in (0.5, 1.0)
+                                 or result.get("training_fraction") != node.training_fraction):
+                        raise EvaluationError("Checkpoint lacks matching training-fidelity provenance")
             # The managed runtime can recover nodes newer than journal.json.
             # Admit its ledger/transition snapshots before it appends or fits them.
             if ledger.exists():
@@ -464,8 +475,32 @@ class FixedEvaluation:
                             result = node.get("evaluation_result") or {}
                             if node.get("evaluation_protocol_id") != instance.protocol_id or not result.get("valid") or result.get("metric") != record["child_metric_raw"]:
                                 raise EvaluationError("Transition history lacks the matching fixed evaluator result")
-        journal.evaluation_state = {"protocol_dir": str(directory), "protocol_id": instance.protocol_id,
+                            if mode and (node.get("training_fraction") not in (0.5, 1.0)
+                                         or result.get("training_fraction") != node.get("training_fraction")):
+                                raise EvaluationError("Transition history lacks training-fidelity provenance")
+        journal.evaluation_state = {**(state or {}), "protocol_dir": str(directory), "protocol_id": instance.protocol_id,
                                     "setup_cost_seconds": spec["setup_cost_seconds"], "load_wall_seconds": elapsed}
+        instance.multifidelity_mode = mode
+        instance.multifidelity_phase = (state or {}).get("multifidelity_phase", "half") if mode else None
+        if mode:
+            from engine.multifidelity import prepare_view
+            marker = Path(cfg.workspace_dir) / "multifidelity_stage.json"
+            if not state and (marker.exists() or (Path(cfg.workspace_dir) / "multifidelity_subset.json").exists()):
+                raise EvaluationError("A new multi-fidelity search requires a fresh workspace")
+            if marker.exists():
+                saved_stage = _json(marker)
+                if saved_stage != {"protocol_id": instance.protocol_id, "mode": mode, "phase": "full"}:
+                    raise EvaluationError("Invalid full-training switch marker")
+                instance.multifidelity_phase = "full"
+            elif instance.multifidelity_phase == "full":
+                raise EvaluationError("Full-training checkpoint is missing its switch marker")
+            view, manifest = prepare_view(directory, cfg.workspace_dir, int(cfg.agent.seed))
+            if state and state.get("multifidelity_subset") != manifest:
+                raise EvaluationError("Resume half-training sample differs from admitted journal")
+            journal.evaluation_state.update(multifidelity_mode=mode,
+                multifidelity_phase=instance.multifidelity_phase, multifidelity_subset=manifest,
+                multifidelity_switch_fraction=0.40)
+            instance.half_view = view
         instance.budget_charge = elapsed if state else max(elapsed, spec["setup_cost_seconds"])
         instance._install_public_view()
         return instance
@@ -473,17 +508,21 @@ class FixedEvaluation:
     def _install_public_view(self):
         workspace = Path(self.cfg.workspace_dir)
         workspace.mkdir(parents=True, exist_ok=True)
-        destination = workspace / "input"
-        target = self.directory / "public"
-        if destination.is_symlink():
-            if destination.resolve() != target:
-                raise EvaluationError("Workspace input is bound to another data view")
+        target = self.half_view if self.multifidelity_phase == "half" else self.directory / "public"
+        if self.multifidelity_mode:
+            from engine.multifidelity import bind_view
+            bind_view(workspace, target, (self.half_view, self.directory / "public"))
         else:
-            if destination.exists():
-                if any(destination.iterdir()):
-                    raise EvaluationError("Fixed mode refuses a workspace containing raw input data")
-                destination.rmdir()
-            destination.symlink_to(target, target_is_directory=True)
+            destination = workspace / "input"
+            if destination.is_symlink():
+                if destination.resolve() != target:
+                    raise EvaluationError("Workspace input is bound to another data view")
+            else:
+                if destination.exists():
+                    if any(destination.iterdir()):
+                        raise EvaluationError("Fixed mode refuses a workspace containing raw input data")
+                    destination.rmdir()
+                destination.symlink_to(target, target_is_directory=True)
         for name in ("working", "submission", "evaluation_outputs", "helpers"):
             (workspace / name).mkdir(exist_ok=True)
         shutil.copyfile(ROOT / "utils/evaluation_helpers.py", workspace / "helpers/evaluation_helpers.py")
@@ -513,8 +552,18 @@ class FixedEvaluation:
                 "protocol and model provenance match; then emit fresh predictions in the new attempt directory.")
 
     def preview(self):
-        return "\n\n".join(name + ":\n" + pd.read_csv(self.directory / "public" / name, nrows=4, keep_default_na=False).to_csv(index=False)
+        return "\n\n".join(name + ":\n" + pd.read_csv(Path(self.cfg.workspace_dir) / "input" / name, nrows=4, keep_default_na=False).to_csv(index=False)
                             for name in PUBLIC_TABLES) + "\n" + self.candidate_contract()
+
+    def switch_to_full(self):
+        if not self.multifidelity_mode or self.multifidelity_phase != "half":
+            raise EvaluationError("Invalid multi-fidelity switch")
+        from engine.multifidelity import bind_view
+        _write_json(Path(self.cfg.workspace_dir) / "multifidelity_stage.json",
+                    {"protocol_id": self.protocol_id, "mode": self.multifidelity_mode, "phase": "full"})
+        self.multifidelity_phase = "full"
+        self.journal.evaluation_state["multifidelity_phase"] = "full"
+        bind_view(self.cfg.workspace_dir, self.directory / "public", (self.half_view,))
 
     def begin_attempt(self, node, remaining_seconds):
         if self.failed.is_set():
@@ -523,6 +572,7 @@ class FixedEvaluation:
         output = Path(self.cfg.workspace_dir) / "evaluation_outputs" / node.id / attempt
         output.mkdir(parents=True)
         node.evaluation_protocol_id = self.protocol_id
+        node.training_fraction = 0.5 if self.multifidelity_phase == "half" else 1.0
         node.evaluation_attempt_id = attempt
         node.evaluation_output_dir = str(output)
         with self._lock:
@@ -558,7 +608,8 @@ class FixedEvaluation:
             if hasattr(self, "journal"):
                 self.journal.evaluation_state["failure"] = {"node_id": node.id, "predictions": str(output), "error_type": type(exc).__name__}
             raise EvaluationError(f"Shared evaluator failure; preserve predictions in {output}") from exc
-        result.update(node_id=node.id, protocol_id=self.protocol_id, attempt_id=node.evaluation_attempt_id)
+        result.update(node_id=node.id, protocol_id=self.protocol_id, attempt_id=node.evaluation_attempt_id,
+                      training_fraction=node.training_fraction)
         _write_json(result_path, result)
         return result
 
@@ -591,7 +642,8 @@ def finalize_submission(cfg, journal=None):
         raise EvaluationError("No fixed protocol journal available for final submission")
     candidates = [n for n in journal.nodes if n.stage != "root" and n.is_valid is True and n.is_buggy is False
                   and n.evaluation_protocol_id == state["protocol_id"] and n.evaluation_result
-                  and n.evaluation_result.get("valid") and n.metric.value == n.evaluation_result.get("metric")]
+                  and n.evaluation_result.get("valid") and n.metric.value == n.evaluation_result.get("metric")
+                  and (not state.get("multifidelity_mode") or n.training_fraction == 1.0)]
     if not candidates:
         raise EvaluationError("No externally scored valid node is available for final submission")
     best = max(candidates, key=lambda n: n.metric)

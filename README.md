@@ -3,9 +3,8 @@
 This independent source repository packages Xixian's MLEvolve-based Bayesian
 optimization engine from `ZeroKnighting/EvolveFold` `xixian/dev` at `ced7bb5a54e91e3ea6236b871f9fcd27027fb493`,
 including his AQ04 selector and fixed ML evaluation. The sole added search
-operation is our evidence-guided redesigned evolution. Candidate evaluation uses the full
-training set provided by the prepared task protocol. The fidelity scheduler,
-its configuration, calibration tools and prompts are absent.
+operation is our evidence-guided redesigned evolution. An optional two-stage
+training view uses a fixed random half of T before switching to full T.
 
 The retained workflow includes draft, improve, debug, review, fusion,
 aggregation, memory and submission. MLEVHarness determines the legal operation
@@ -17,10 +16,10 @@ a complete new program rather than patching the parent. ML-E Bench Lite uses
 `agents/redesign_agent.py`. The original upstream README is preserved in
 `docs/UPSTREAM_README.md`.
 
-The AQ04 selector and fixed evaluator are byte-identical to that upstream
-commit. No frontier, elite, code-kernel, portfolio or multi-fidelity variant is
-included. The redesign flag changes evolution and its stagnation trigger; it
-does not replace AQ04's parent-selection policy. The inherited AlphaEvolve
+The AQ04 selection rule remains the upstream rule. The optional reset mode
+filters its GP training rows to full/full transitions after the switch. The
+redesign flag changes evolution and its stagnation trigger; it does not replace
+AQ04's parent-selection policy. The inherited AlphaEvolve
 package is not the target of this repository's testing; its upstream default
 is unchanged.
 
@@ -56,6 +55,16 @@ the protocol matches the prepared task and seed. It defaults to 12 hours and
 seed. The configured model/provider is Muse Spark 1.3 through OpenCode.
 Only full host-scored V results enter AQ04 BO and choose the final submission.
 The private test score is obtained after search and is never BO feedback.
+
+For a two-stage run, add `--multifidelity-mode carry_over` or
+`--multifidelity-mode reset` to the same launcher command. Both modes use one
+seeded, uniform sample of floor(50% of T), with unchanged full V/test. At 40%
+of the total time budget, the scheduler drains submitted cheap work and then
+switches the training view to full T. Carry over keeps the AQ04 fit. Reset
+refits AQ04 only on full/full parent-child transitions; cheap nodes remain in
+the search population. Only full-trained nodes can win. If no valid full node
+finishes within the budget, finalization fails rather than selecting a cheap
+node. Use separate output directories for the two modes and baseline.
 
 ## Evidence and execution boundary
 

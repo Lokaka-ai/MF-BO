@@ -242,6 +242,21 @@ def test_t21_t22_t23_debug_label_failure_pending_and_negative_gain():
     assert {x["reason"] for x in exclusions} == {"not_ordinary_proposal", "closed_failure_no_quality_label", "pending_or_censored"}
 
 
+def test_reset_gp_rows_require_full_parent_and_full_child():
+    state, records, agent, nodes, cheap_features = causal_fixture()
+    records.append(event("mixed", "b", "full", "improve", -1.35, -1.4, cheap_features))
+    state.sync(records)
+    full_node = NS(id="full", agent_potential_level=2, agent_potential_assessed_at="full")
+    agent.journal.nodes.append(full_node)
+    full_features = state.features(agent, full_node, "improve", records)
+    records.append(event("full_edge", "full", "next", "improve", -1.3, -1.35, full_features))
+    rows, targets, ids, exclusions = state.training_data(records, {"full", "next"})
+    assert rows == [full_features]
+    assert ids == [{"proposal_id": "full_edge", "outcome_id": "full_edge"}]
+    assert any(item == {"proposal_id": "mixed", "reason": "not_full_full_transition"}
+               for item in exclusions)
+
+
 def test_t24_t25_t26_t27_frozen_history_rating_reference_and_replay():
     state, records, agent, nodes, frozen = causal_fixture()
     reference = copy.deepcopy(state.reference)

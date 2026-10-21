@@ -20,6 +20,7 @@ resume_elapsed_seconds: 0  # Legacy/manual floor; new journals persist active ti
 evaluation:
   enabled: false
   protocol_dir: null
+  multifidelity_mode: null  # null, carry_over, or reset
   setup_timeout_seconds: 900
   setup_max_attempts: 0  # 0: DEBUG repairs until success or the setup deadline.
   score_timeout_seconds: 120

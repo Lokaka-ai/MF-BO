@@ -52,6 +52,7 @@ class SearchNode(DataClassJsonMixin):
     evaluation_attempt_id: str | None = field(default=None, kw_only=True)
     evaluation_output_dir: str | None = field(default=None, kw_only=True)
     evaluation_result: dict | None = field(default=None, kw_only=True)
+    training_fraction: float | None = field(default=None, kw_only=True)
 
     # Optional post-execution judgment of THIS node, never its producing input.
     agent_potential_level: int | None = field(default=None, kw_only=True)

@@ -73,6 +73,26 @@ def run():
         cfg=cfg,
         journal=journal,
     )
+    multifidelity = agent.fixed_evaluation if (agent.fixed_evaluation and agent.fixed_evaluation.multifidelity_mode) else None
+
+    def switch_due():
+        return (multifidelity is not None and multifidelity.multifidelity_phase == "half"
+                and time.time() - agent.start_time >= .40 * float(cfg.agent.time_limit))
+
+    def switch_if_drained(futures):
+        if not switch_due() or futures:
+            return False
+        if agent.phase1_runtime.root_draft_state["pending"]:
+            raise EvaluationError("Cannot switch training view with pending search decisions")
+        multifidelity.switch_to_full()
+        if multifidelity.multifidelity_mode == "reset":
+            selector = agent.phase1_runtime.study7_selector
+            selector.full_training_only = True
+            selector.observe(agent.phase1_runtime.transition_store.records())
+        agent.update_data_preview()
+        persist_run_state()
+        logger.info("Training view switched to full T after draining cheap work; mode=%s", multifidelity.multifidelity_mode)
+        return True
 
     def persist_run_state():
         with agent.journal_lock:
@@ -160,6 +180,9 @@ def run():
 
         for draft_idx in range(min(initial_draft_count, total_steps)):
             try:
+                if switch_due():
+                    logger.info("Cheap-stage deadline reached during draft generation; draining generated drafts")
+                    break
                 logger.info(f"🔨 Generating draft {draft_idx + 1}/{min(initial_draft_count, total_steps)} (code only)")
                 cur_node = step_task_generate_only()
                 if not root_enabled or getattr(cur_node, "pending_execution", False):
@@ -211,14 +234,30 @@ def run():
 
             for context in recovered_generation:
                 futures.add(executor.submit(agent.step, None, exec_callback, recovery_context=context))
-            initial_step_tasks = min(max_workers, total_steps - completed) - len(pending_draft_nodes) - len(recovered_generation)
+            initial_step_tasks = (0 if switch_due() else min(max_workers, total_steps - completed) - len(pending_draft_nodes) - len(recovered_generation))
             if initial_step_tasks > 0:
                 for _ in range(initial_step_tasks):
                     next_node = ready_nodes.pop() if ready_nodes else None
                     futures.add(executor.submit(step_task, next_node))
                     logger.info(f"📤 Submitted initial step_task to fill thread pool")
 
-            while completed < total_steps and (futures or not root_enabled):
+            while (completed < total_steps or (multifidelity and futures)) and (futures or not root_enabled or (multifidelity and multifidelity.multifidelity_phase == "half")):
+                if switch_if_drained(futures):
+                    if completed < total_steps:
+                        remaining_drafts = (agent.phase1_runtime.root_draft_state["initial_goal"]
+                                            - agent.phase1_runtime.root_draft_state["initial_submitted"])
+                        if remaining_drafts:
+                            for _ in range(min(remaining_drafts, total_steps - completed)):
+                                node = agent.step(exec_callback=exec_callback, node=None, execute_immediately=False)
+                                if getattr(node, "pending_execution", False):
+                                    futures.add(executor.submit(execute_draft_node, node))
+                        else:
+                            next_node = ready_nodes.pop() if ready_nodes else None
+                            futures.add(executor.submit(step_task, next_node))
+                    continue
+                if not futures:
+                    time.sleep(1)
+                    continue
                 done, _ = wait(futures, return_when=FIRST_COMPLETED, timeout=1.0)
 
                 if not done:
@@ -258,7 +297,7 @@ def run():
                         ready_nodes.append(cur_node)
                     # A concurrently exhausted global selector must not discard
                     # the continuation returned by a completed deferred draft.
-                    if completed + len(futures) < total_steps and (ready_nodes or not exhausted):
+                    if completed + len(futures) < total_steps and not switch_due() and (ready_nodes or not exhausted):
                         next_node = ready_nodes.pop() if ready_nodes else cur_node
                         futures.add(executor.submit(step_task, next_node))
                         logger.info(f"📤 Submitted next task based on node {next_node.id if next_node else 'None'}")

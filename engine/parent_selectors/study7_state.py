@@ -168,7 +168,7 @@ class Study7State:
             "birth_commit_index": next(index for index, node in enumerate(agent.journal.nodes) if node.id == parent.id)}
         return result
 
-    def training_data(self, records):
+    def training_data(self, records, full_node_ids=None):
         rows, targets, ids, exclusions = [], [], [], []
         if self.reference is None:
             return rows, targets, ids, exclusions
@@ -180,6 +180,9 @@ class Study7State:
                 reason = "pending_or_censored"
             elif not row.valid:
                 reason = "closed_failure_no_quality_label"
+            elif full_node_ids is not None and (row.parent_node_id not in full_node_ids
+                                                 or row.child_node_id not in full_node_ids):
+                reason = "not_full_full_transition"
             if reason:
                 exclusions.append({"proposal_id": row.decision_id, "reason": reason})
                 continue

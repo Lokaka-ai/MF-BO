@@ -57,6 +57,8 @@ def build_command(args):
                f"cpu_number={args.cpus}", f"agent.search.parallel_search_num={args.workers}"]
     if args.protocol_dir:
         command.append(f"evaluation.protocol_dir={args.protocol_dir.resolve()}")
+    if args.multifidelity_mode:
+        command.append(f"evaluation.multifidelity_mode={args.multifidelity_mode}")
     return command
 
 
@@ -71,6 +73,7 @@ def main(argv=None):
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--cpus", type=int, default=4)
     parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument("--multifidelity-mode", choices=("carry_over", "reset"))
     parser.add_argument("--check-only", action="store_true", help="Print the command without running search")
     args = parser.parse_args(argv)
     try:

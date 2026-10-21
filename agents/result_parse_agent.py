@@ -471,7 +471,8 @@ def _run_fixed(agent, node, exec_result):
     if node.exc_type is not None:
         result = {"valid": False, "metric": None, "error": f"Execution failed: {node.exc_type}",
                   "protocol_id": evaluator.protocol_id, "node_id": node.id, "n_scored": 0,
-                  "attempt_id": node.evaluation_attempt_id}
+                  "attempt_id": node.evaluation_attempt_id,
+                  "training_fraction": getattr(node, "training_fraction", None)}
     else:
         # EvaluationError deliberately escapes the legacy parser retry handler.
         result = evaluator.score(node)

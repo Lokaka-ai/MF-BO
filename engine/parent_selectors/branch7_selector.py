@@ -26,6 +26,7 @@ class Branch7Selector(Study7Selector):
         self.fixed_reference_rows = None
         self.previous_lineage = None
         self._selecting = False
+        self.full_training_only = False
 
     def reserve(self, decision, option, commit_index):
         info = self.state.lineages.reserve(decision, option, commit_index)
@@ -38,10 +39,17 @@ class Branch7Selector(Study7Selector):
     @log_fatal
     def observe(self, records):
         self.state.sync(records)
+        training_full_ids = None
+        if self.full_training_only:
+            from engine.multifidelity import full_node_ids
+            training_full_ids = full_node_ids(records)
         # Native GP6 fits at selection after feedback changed; GP4 retains its
         # historical feedback-time fit. Neither freezes a reference on receipt.
         if self.state.reference is not None and (self.config.base_dimension == 4 or self._selecting):
-            rows, targets, ids, exclusions = self.state.training_data(records)
+            if training_full_ids is not None:
+                rows, targets, ids, exclusions = self.state.training_data(records, training_full_ids)
+            else:
+                rows, targets, ids, exclusions = self.state.training_data(records)
             if self.config.base_dimension == 6:
                 self.gp.raw_transition_count = len(records)
             changed = self.gp.fit(rows, targets, training_ids=ids)
@@ -57,7 +65,8 @@ class Branch7Selector(Study7Selector):
         for row in scientific_proposals(records):
             meta = row.metadata or {}
             eligible = (row.valid and (self.config.base_dimension == 6 or row.operator in NORMAL_OPERATORS)
-                        and closed(row))
+                        and closed(row) and (training_full_ids is None or
+                        (row.parent_node_id in training_full_ids and row.child_node_id in training_full_ids)))
             payload = {"method_id": self.config.method_id, "proposal_id": row.decision_id,
                 "parent_id": row.parent_node_id, "operator": row.operator,
                 "proposal_transition_ids": meta["proposal_transition_ids"],

@@ -47,10 +47,13 @@ class CampaignTests(unittest.TestCase):
 
     def test_submit_all_is_idempotent_and_quotes_paths(self):
         args = SimpleNamespace(campaign=self.path, partition="long", tasks=None)
+        campaign.save(self.path / "settings.json", self.settings)
+        campaign.save(self.path / "gpu-ready.json", {"settings_sha256": campaign.sha(self.path / "settings.json")})
         with patch.object(campaign, "ready", return_value=self.settings), \
              patch.object(campaign, "run", return_value=SimpleNamespace(stdout="12345\n")) as run:
             campaign.submit(args)
             self.assertEqual(run.call_count, 28)
+
             for call in run.call_args_list:
                 argv = call.args[0]
                 self.assertIn("--gres=gpu:a100l:1", argv)
@@ -59,6 +62,13 @@ class CampaignTests(unittest.TestCase):
                 self.assertEqual(wrapper[-1], str(self.path))
             campaign.submit(args)
             self.assertEqual(run.call_count, 28)
+
+    def test_full_submission_requires_short_gpu_preflight(self):
+        args = SimpleNamespace(campaign=self.path, partition="long", tasks=None)
+        with patch.object(campaign, "ready", return_value=self.settings), patch.object(campaign, "run") as run:
+            with self.assertRaises(FileNotFoundError):
+                campaign.submit(args)
+        run.assert_not_called()
 
     def test_unknown_submission_is_not_retried(self):
         campaign.save(self.path / "jobs.json", {"x": {"state": "submitting"}})

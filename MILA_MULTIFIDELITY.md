@@ -20,6 +20,8 @@ evolution continue. Only valid full-training programs can win.
 Long cheap evaluations can delay the switch substantially. A run with no valid
 full-data winner is a failure, not a cheap-data result. There is no automatic
 restart or replacement of failed runs.
+If the cheap search exhausts legal work before the cutoff, it stops immediately
+with an explicit failure instead of holding an idle GPU until the switch.
 
 **This is not an exact reproduction of the historical upstream campaign.**
 The approved differences are fixed validation, redesigned evolution, the native
@@ -103,7 +105,24 @@ submissions; after confirming the job has stopped, remove only the `prepare`
 entry from `runs/mf14_aq05/jobs.json` before retrying the same preparation.
 Do not delete settings, protocols or search outputs to conceal a failed run.
 
-## 4. Launch a pilot pair, then the remaining jobs
+## 4. Run the short GPU preflight
+
+```bash
+python3 tasks/mlebench_lite/mila_multifidelity.py submit-preflight \
+  --partition unkillable
+```
+
+This requests one A100 80GB, 4 CPUs, 24GB RAM, with a **20-minute maximum**.
+It checks actual CUDA training/backpropagation, the embedding model, live
+OpenCode calls, and both modes through real CPU candidate execution and the
+three-worker search loop. LLM candidate replies in the integration tests are
+synthetic; the separate provider check makes real calls. No benchmark results
+are produced. Only a successful job writes `runs/mf14_aq05/gpu-ready.json`.
+Full search submission refuses to proceed without that record matching the
+prepared settings. On failure, inspect logs before retrying; the submission
+ledger uses key `gpu-preflight`.
+
+## 5. Launch a pilot pair, then the remaining jobs
 
 ```bash
 python3 tasks/mlebench_lite/mila_multifidelity.py submit \
@@ -129,7 +148,17 @@ The nominal total is 28 × 12 = **336 GPU-hours** of search, plus startup/gradin
 queue time and preparation are additional. All jobs may queue concurrently;
 Slurm applies your account limits.
 
-## 5. Collect results
+Mila's partition documentation checked on 2026-10-22 lists `unkillable` at
+6 CPUs/32GB, `main` at 8 CPUs/48GB, and `long` without these resource limits.
+The 4CPU/24GB cactus and RANZCR jobs and the 6CPU/32GB APTOS jobs fit
+`unkillable`. The other task allocations require `long` under these documented
+limits. **`long` is preemptible and this launcher has no automatic resume.**
+Confirm whether interrupted runs are acceptable before launching those tasks;
+do not silently reduce resources or restart with a fresh budget. CPU preparation
+(4CPU/64GB/24h) fits `main-cpu` or `long-cpu`, not `unkillable-cpu`.
+Source: https://docs.mila.quebec/technical_reference/clusters/mila/partitions/
+
+## 6. Collect results
 
 ```bash
 python3 tasks/mlebench_lite/mila_multifidelity.py collect
@@ -161,7 +190,7 @@ fixed validation is a host-scoring protocol, not an OS-level data-access sandbox
 The standard-library launch tests can run with:
 `python3 tests/test_multifidelity_campaign.py`.
 They check all 28 commands, task exclusions, settings parity, path quoting,
-duplicate prevention, source verification and missing-result reporting.
+duplicate prevention, source verification, the GPU preflight gate and missing-result reporting.
 Full ML regression tests and CUDA/provider checks must pass on Mila before
 search. No local test can certify your account access, Slurm availability,
 dataset permissions, or successful model training.

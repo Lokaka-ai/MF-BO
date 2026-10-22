@@ -152,7 +152,10 @@ def prepare(args):
     env = environment(settings)
     run(["bash", "tasks/mlebench_lite/setup.sh"], env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
-         "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py"], env=env)
+         "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
+         "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py"], env=env)
+    run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
+         "--output", args.campaign / "cpu-environment.json"], env=env)
     run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "provider-check.json"], env=env)
     spec = settings["spec"]
     run([PYTHON, "tasks/mlebench_lite/prepare.py", "--data-dir", settings["data_dir"],
@@ -168,7 +171,7 @@ def prepare(args):
         protocols[task] = {key: protocol[key] for key in ("protocol_id", "metric", "split")}
     save(args.campaign / "ready.json", {"settings_sha256": sha(args.campaign / "settings.json"),
                                        "protocols": protocols})
-    print("Preparation passed. Submit the pilot pair, then the remaining tasks.")
+    print("Preparation passed. Submit the short GPU preflight before any full search.")
 
 
 def ready(campaign):
@@ -183,6 +186,9 @@ def ready(campaign):
 
 def submit(args):
     settings = ready(args.campaign)
+    gpu_ready = read(args.campaign / "gpu-ready.json")
+    if gpu_ready.get("settings_sha256") != sha(args.campaign / "settings.json"):
+        raise RuntimeError("Short GPU preflight has not passed for these campaign settings")
     spec = settings["spec"]
     tasks = args.tasks or list(spec["tasks"])
     if set(tasks) - set(spec["tasks"]):
@@ -194,6 +200,48 @@ def submit(args):
                 command = batch_command(args.campaign, args.partition, resources["cpus"],
                     resources["memory_gb"], spec["slurm_time"], ["worker", "--task", task, "--mode", mode], gpu=True)
                 sbatch(args.campaign, f"{task}/{mode}", command)
+
+
+def submit_preflight(args):
+    ready(args.campaign)
+    with submission_lock(args.campaign):
+        sbatch(args.campaign, "gpu-preflight", batch_command(
+            args.campaign, args.partition, 4, 24, "00:20:00", ["preflight"], gpu=True))
+
+
+def preflight(args):
+    require_allocation()
+    if Path(sys.prefix).resolve() != PYTHON.parent.parent.resolve():
+        os.execv(str(PYTHON), [str(PYTHON), str(SCRIPT), *sys.argv[1:]])
+    settings = ready(args.campaign)
+    env = environment(settings)
+    import torch
+    if torch.cuda.device_count() != 1:
+        raise RuntimeError("Preflight requires one Slurm-visible GPU")
+    props = torch.cuda.get_device_properties(0)
+    if "A100" not in props.name or props.total_memory < 70 * 1024**3:
+        raise RuntimeError("Preflight requires A100 80GB")
+    model = torch.nn.Linear(16, 1).cuda()
+    optimizer = torch.optim.Adam(model.parameters())
+    features = torch.randn(64, 16, device="cuda")
+    targets = features.sum(dim=1, keepdim=True)
+    for _ in range(10):
+        optimizer.zero_grad()
+        loss = (model(features) - targets).square().mean()
+        loss.backward()
+        optimizer.step()
+    if not torch.isfinite(loss).item():
+        raise RuntimeError("CUDA training preflight produced nonfinite loss")
+    run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--require-cuda", "--embedding",
+         "--output", args.campaign / "gpu-environment.json"], env=env)
+    run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "gpu-provider-check.json"], env=env)
+    run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
+         "tests/test_multifidelity_integration.py"], env=env)
+    save(args.campaign / "gpu-ready.json", {
+        "settings_sha256": sha(args.campaign / "settings.json"),
+        "job_id": os.environ["SLURM_JOB_ID"], "gpu": props.name,
+        "cuda_training_loss": loss.item(),
+        "checks": "CUDA training/embedding, live provider, both mode CPU integration and full runner"})
 
 
 def search_command(settings, campaign, task, mode, python=PYTHON):
@@ -307,7 +355,7 @@ def collect(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("submit-prepare", "prepare", "submit", "worker", "collect"))
+    parser.add_argument("command", choices=("submit-prepare", "prepare", "submit-preflight", "preflight", "submit", "worker", "collect"))
     parser.add_argument("--campaign", type=Path, default=ROOT / "runs/mf14_aq05")
     parser.add_argument("--partition", help="Your available Slurm partition; required for submissions")
     parser.add_argument("--key-file", type=Path)
@@ -323,6 +371,7 @@ def main():
     if args.command == "submit-prepare" and (args.key_file is None or args.token_file is None):
         parser.error("Provide --key-file and --token-file paths (never raw credentials)")
     {"submit-prepare": submit_preparation, "prepare": prepare, "submit": submit,
+     "submit-preflight": submit_preflight, "preflight": preflight,
      "worker": worker, "collect": collect}[args.command](args)
 
 

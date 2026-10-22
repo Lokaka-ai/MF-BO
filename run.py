@@ -257,6 +257,8 @@ def run():
                                 futures.add(executor.submit(step_task, next_node))
                     continue
                 if not futures:
+                    if root_enabled and multifidelity:
+                        raise RuntimeError("Multi-fidelity search has no runnable work before the training switch; stopping instead of idling until the deadline")
                     time.sleep(1)
                     continue
                 done, _ = wait(futures, return_when=FIRST_COMPLETED, timeout=1.0)

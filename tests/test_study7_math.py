@@ -257,6 +257,17 @@ def test_reset_gp_rows_require_full_parent_and_full_child():
                for item in exclusions)
 
 
+def test_aq05_state_forwards_reset_filter():
+    from unittest.mock import patch
+    from config.acq7 import Acq7ModelConfig
+    from engine.parent_selectors.acq7_state import Acq7State
+    state = Acq7State(Acq7ModelConfig(method_id="AQ05"))
+    records, full_ids = [], {"full-parent", "full-child"}
+    with patch.object(Study7State, "training_data", return_value=([], [], [], [])) as collect:
+        assert state.training_data(records, full_ids) == ([], [], [], [])
+        collect.assert_called_once_with(records, full_node_ids=full_ids)
+
+
 def test_t24_t25_t26_t27_frozen_history_rating_reference_and_replay():
     state, records, agent, nodes, frozen = causal_fixture()
     reference = copy.deepcopy(state.reference)

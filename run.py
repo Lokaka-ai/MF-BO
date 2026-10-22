@@ -252,8 +252,9 @@ def run():
                                 if getattr(node, "pending_execution", False):
                                     futures.add(executor.submit(execute_draft_node, node))
                         else:
-                            next_node = ready_nodes.pop() if ready_nodes else None
-                            futures.add(executor.submit(step_task, next_node))
+                            for _ in range(min(max_workers, total_steps - completed)):
+                                next_node = ready_nodes.pop() if ready_nodes else None
+                                futures.add(executor.submit(step_task, next_node))
                     continue
                 if not futures:
                     time.sleep(1)

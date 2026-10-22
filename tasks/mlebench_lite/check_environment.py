@@ -21,6 +21,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--require-cuda", action="store_true")
     parser.add_argument("--embedding", action="store_true")
+    parser.add_argument("--output", type=Path, default=ROOT / ".cache/mlebench-lite/environment-ready.json")
     args = parser.parse_args()
     os.environ.setdefault("HF_HOME", str(ROOT / ".cache/mlebench-lite/huggingface"))
     os.environ.setdefault("MPLCONFIGDIR", str(ROOT / ".cache/mlebench-lite/matplotlib"))
@@ -65,7 +66,7 @@ def main():
     report["utilities"] = {name: shutil.which(name) for name in ("git", "unzip", "7z", "ffmpeg")}
     if not all(report["utilities"].values()):
         raise RuntimeError("Missing a required system utility")
-    output = ROOT / ".cache/mlebench-lite/environment-ready.json"
+    output = args.output
     output.parent.mkdir(parents=True, exist_ok=True)
     output.write_text(json.dumps(report, indent=2) + "\n")
     print(f"Environment verified: {output}", flush=True)

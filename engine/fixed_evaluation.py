@@ -392,6 +392,8 @@ class FixedEvaluation:
     def __init__(self, directory, spec, cfg):
         self.directory, self.spec, self.cfg = Path(directory), spec, cfg
         self.protocol_id = spec["protocol_id"]
+        self.multifidelity_mode = None
+        self.multifidelity_phase = None
         self.failed = threading.Event()
         self._attempts = {}
         self._lock = threading.Lock()
@@ -405,8 +407,8 @@ class FixedEvaluation:
         mode = getattr(cfg.evaluation, "multifidelity_mode", None)
         if mode is not None and (mode not in MODES or not cfg.evaluation.enabled
                                  or str(cfg.parent_selector.type) != "acq7_gp4"
-                                 or str(cfg.study7.method_id) != "AQ04"):
-            raise EvaluationError("Multi-fidelity requires fixed evaluation and AQ04; choose carry_over or reset")
+                                 or str(cfg.study7.method_id) not in {"AQ04", "AQ05"}):
+            raise EvaluationError("Multi-fidelity requires fixed evaluation and AQ04/AQ05; choose carry_over or reset")
         if state and state.get("multifidelity_mode") != mode:
             raise EvaluationError("Resume multi-fidelity mode differs from admitted journal")
         if is_resume and not state:

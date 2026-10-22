@@ -111,9 +111,11 @@ class Branch7State(Study7State):
             row["gp6_raw_features"] = raw
         return row
 
-    def training_data(self, records):
+    def training_data(self, records, full_node_ids=None):
         if not self.native:
-            return super().training_data(records)
+            return super().training_data(records, full_node_ids=full_node_ids)
+        if full_node_ids is not None:
+            raise Study7Error("Full/full filtering is only supported for the GP4 multi-fidelity workflow")
         rows, targets, ids, exclusions = [], [], [], []
         if self.reference is None:
             return rows, targets, ids, exclusions

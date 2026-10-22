@@ -5,6 +5,7 @@ import hashlib
 import json
 from pathlib import Path
 import random
+import sys
 
 
 MODES = ("carry_over", "reset")
@@ -21,6 +22,7 @@ def file_hash(path):
 
 def prepare_view(protocol_dir, workspace, seed):
     """Sample IDs uniformly once; preserve original CSV order and all V/test rows."""
+    csv.field_size_limit(sys.maxsize)
     protocol_dir, workspace = Path(protocol_dir), Path(workspace)
     source = protocol_dir / "public"
     view = workspace / "input_half"

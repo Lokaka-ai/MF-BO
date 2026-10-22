@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Launch AQ04 BO with redesigned evolution and fixed full evaluation."""
+"""Launch AQ04/AQ05 BO with redesigned evolution and fixed evaluation."""
 from __future__ import annotations
 
 import argparse
@@ -51,13 +51,14 @@ def build_command(args):
     command = [sys.executable, "-u", "run.py", f"exp_id={args.task}", f"exp_name={args.task}",
                f"dataset_dir={args.data_root.resolve()}", f"data_dir={public}", f"desc_file={desc}",
                f"log_dir={output}", f"workspace_dir={output}",
-               "experiment_preset=acq7_aq04_gp4_level15_rating_jts", "audited_bo=redesign",
+               ("experiment_preset=acq7_aq05_gp4_level15_rating_kg" if getattr(args, "selector", "AQ04") == "AQ05"
+                else "experiment_preset=acq7_aq04_gp4_level15_rating_jts"), "audited_bo=redesign",
                "evaluation.enabled=true", f"agent.time_limit={args.time_limit}",
                f"agent.steps={args.steps}", f"agent.seed={args.seed}",
                f"cpu_number={args.cpus}", f"agent.search.parallel_search_num={args.workers}"]
     if args.protocol_dir:
         command.append(f"evaluation.protocol_dir={args.protocol_dir.resolve()}")
-    if args.multifidelity_mode:
+    if getattr(args, "multifidelity_mode", None):
         command.append(f"evaluation.multifidelity_mode={args.multifidelity_mode}")
     return command
 
@@ -74,6 +75,7 @@ def main(argv=None):
     parser.add_argument("--cpus", type=int, default=4)
     parser.add_argument("--workers", type=int, default=1)
     parser.add_argument("--multifidelity-mode", choices=("carry_over", "reset"))
+    parser.add_argument("--selector", choices=("AQ04", "AQ05"), default="AQ04")
     parser.add_argument("--check-only", action="store_true", help="Print the command without running search")
     args = parser.parse_args(argv)
     try:

@@ -32,7 +32,10 @@ def run():
     cfg = load_cfg()
     run_info = {"log_dir": str(cfg.log_dir), "workspace_dir": str(cfg.workspace_dir), "fixed_evaluation": fixed_enabled(cfg)}
     if cfg.run_result_file:
-        Path(cfg.run_result_file).write_text(json.dumps(run_info))
+        result_path = Path(cfg.run_result_file)
+        result_temp = result_path.with_suffix(".tmp")
+        result_temp.write_text(json.dumps(run_info))
+        result_temp.replace(result_path)
     is_resume = bool(cfg.resume_run_dir)
     if cfg.torch_hub_dir:
         torch.hub.set_dir(cfg.torch_hub_dir)
@@ -106,6 +109,11 @@ def run():
         persist_run_state()
         logger.info("Persisted admitted resume state before continuing search")
     competition_checkpoint = install_competition_checkpoint(agent, persist_run_state)
+    if fixed_enabled(cfg) and time.time() - agent.start_time >= float(cfg.agent.time_limit):
+        if competition_checkpoint is not None:
+            competition_checkpoint.set()
+        finalize_submission(cfg, journal)
+        return
 
     interpreter_class = Interpreter
     if getattr(agent, "alphaevolve", None):
@@ -323,6 +331,8 @@ def run():
             executor.shutdown(wait=False, cancel_futures=True) if sys.version_info >= (3, 9) else executor.shutdown(wait=False)
             raise
         finally:
+            if sys.exc_info()[0] is not None and competition_checkpoint is not None:
+                competition_checkpoint.set()
             if not interrupted:
                 executor.shutdown(wait=True)
     else:
@@ -340,7 +350,8 @@ def run():
         competition_checkpoint.set()
         # Allocation boundaries never invoke fusion/grading. The supervisor
         # finalizes once, after the cumulative budget or step cap is reached.
-        return
+        if not fixed_enabled(cfg):
+            return
     if getattr(agent, "alphaevolve", None):
         agent.alphaevolve.finalize(journal)
     elif agent.autoresearch:

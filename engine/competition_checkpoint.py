@@ -32,6 +32,8 @@ def restore_data_preview(agent):
     """Recover old checkpoints from the exact preview recorded in a draft."""
     if not enabled(agent.cfg):
         return
+    if agent.cfg.evaluation.enabled:
+        return  # Fixed evaluation derives its preview from the current fidelity view.
     saved = agent.journal.study7_search_state or {}
     preview = saved.get('competition_data_preview')
     if isinstance(preview, str):
@@ -124,6 +126,9 @@ def legacy_enabled(cfg):
 
 
 def enabled(cfg):
+    from engine.mf_recovery import enabled as mf_enabled
+    if mf_enabled(cfg):
+        return True
     if os.environ.get("MLEVOLVE_COMPETITION_CHECKPOINT") != "1":
         return False
     aq = cfg.parent_selector.type == "acq7_gp4" and cfg.study7.method_id in {"AQ04", "AQ05"}
@@ -141,6 +146,9 @@ def atomic_json(path, value):
 
 def execute(interpreter, cfg, code, node_id, *args, **kwargs):
     """Retain completed training output and the 9h execution cap across leases."""
+    from engine.mf_recovery import enabled as mf_enabled, execute as mf_execute
+    if mf_enabled(cfg):
+        return mf_execute(interpreter, cfg, code, node_id, *args, **kwargs)
     from engine.executor import ExecutionResult
     path = Path(cfg.log_dir) / 'candidate_execution' / f'{node_id}.json'
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -188,6 +196,9 @@ def install(agent, persist):
     """Start only after AgentSearch restored its journal/RNG/active budget."""
     if not enabled(agent.cfg):
         return None
+    from engine.mf_recovery import enabled as mf_enabled, install as mf_install
+    if mf_enabled(agent.cfg):
+        return mf_install(agent, persist)
     # Acq7 time checks must also count initial draft generation.
     agent.search_start_time = agent.start_time
     pause_file = Path(os.environ["MLEVOLVE_COMPETITION_PAUSE_FILE"])

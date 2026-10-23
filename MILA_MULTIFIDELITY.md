@@ -152,13 +152,42 @@ Mila's partition documentation checked on 2026-10-22 lists `unkillable` at
 6 CPUs/32GB, `main` at 8 CPUs/48GB, and `long` without these resource limits.
 The 4CPU/24GB cactus and RANZCR jobs and the 6CPU/32GB APTOS jobs fit
 `unkillable`. The other task allocations require `long` under these documented
-limits. **`long` is preemptible and this launcher has no automatic resume.**
-Confirm whether interrupted runs are acceptable before launching those tasks;
-do not silently reduce resources or restart with a fresh budget. CPU preparation
+limits. **`long` is preemptible; interrupted searches support explicit recovery.**
+Use the recovery command below without changing resources or granting a fresh budget. CPU preparation
 (4CPU/64GB/24h) fits `main-cpu` or `long-cpu`, not `unkillable-cpu`.
 Source: https://docs.mila.quebec/technical_reference/clusters/mila/partitions/
 
-## 6. Collect results
+## 6. Recover an interrupted search
+
+After Slurm has released the interrupted allocation:
+
+```bash
+python3 tasks/mlebench_lite/mila_multifidelity.py resume \
+  --partition long --task TASK_ID --mode carry_over
+```
+
+Use the interrupted run's task ID, mode (`carry_over` or `reset`) and original
+partition. The command checks `squeue` and `sacct`, refuses a still-active job,
+and submits at most one replacement per interrupted allocation. There is no
+automatic requeue or unlimited retry loop. Ordinary program failures require
+investigation; they are not automatically treated as interruptions.
+
+Recovery preserves completed results, the search population, saved BO state,
+fidelity stage and original 12-hour cumulative search budget. Queue downtime is
+excluded. Checkpoints are saved every 15 seconds and on interruption signals.
+Hard termination uses saved state and Slurm's recorded ending time; time spent
+on interrupted work remains charged. Incomplete training reruns the same saved
+program, with its earlier execution time deducted from the nine-hour candidate
+cap. This does not restore an in-training model/optimizer checkpoint. An
+unfinished generation replays its saved decision and may require another LLM
+call; recovery does not guarantee an identical stochastic trajectory.
+
+Keep the entire campaign directory. Recovery requires an initialized search
+checkpoint; a setup failure before that point needs investigation. The short
+GPU preflight includes local-process interruption tests for both modes; actual
+Slurm interruption behavior still needs verification on Mila.
+
+## 7. Collect results
 
 ```bash
 python3 tasks/mlebench_lite/mila_multifidelity.py collect

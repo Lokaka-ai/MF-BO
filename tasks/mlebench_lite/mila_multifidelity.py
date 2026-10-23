@@ -16,6 +16,10 @@ import shlex
 import shutil
 import subprocess
 import sys
+import signal
+import time
+import math
+from datetime import datetime, timezone
 from contextlib import contextmanager
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -61,6 +65,7 @@ def source_hashes():
 def environment(settings):
     env = dict(os.environ)
     env.update(OPENCODE_API_KEY_FILE=settings["key_file"], MLEVOLVE_OPENCODE_REASONING_EFFORT="high",
+               MLEVOLVE_MF_RECOVERY="1",
                MLEVOLVE_CODEX_REASONING_EFFORT="high", MLEVOLVE_OPENCODE_TIMEOUT_SECONDS="1800",
                PYTHONUNBUFFERED="1", PYTHONPATH=str(ROOT), USE_TF="0",
                OMP_NUM_THREADS="1", MKL_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
@@ -111,7 +116,9 @@ def batch_command(campaign, partition, cpus, memory, walltime, arguments, gpu=Fa
                "--export=ALL", f"--job-name=mf-{'-'.join(arguments[:1])}"]
     if gpu:
         command.append(f"--gres={spec['gpu_gres']}")
-    command.append("--wrap=" + shlex.join([sys.executable, str(SCRIPT), *arguments,
+    if arguments[0] == "worker":
+        command.append("--signal=B:USR1@60")
+    command.append("--wrap=exec " + shlex.join([sys.executable, str(SCRIPT), *arguments,
                                           "--campaign", str(campaign)]))
     return command
 
@@ -153,7 +160,7 @@ def prepare(args):
     run(["bash", "tasks/mlebench_lite/setup.sh"], env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
          "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
-         "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py"], env=env)
+         "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py"], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
     run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "provider-check.json"], env=env)
@@ -236,12 +243,12 @@ def preflight(args):
          "--output", args.campaign / "gpu-environment.json"], env=env)
     run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "gpu-provider-check.json"], env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-         "tests/test_multifidelity_integration.py"], env=env)
+         "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py"], env=env)
     save(args.campaign / "gpu-ready.json", {
         "settings_sha256": sha(args.campaign / "settings.json"),
         "job_id": os.environ["SLURM_JOB_ID"], "gpu": props.name,
         "cuda_training_loss": loss.item(),
-        "checks": "CUDA training/embedding, live provider, both mode CPU integration and full runner"})
+        "checks": "CUDA training/embedding, live provider, both mode integration/runner and process-kill recovery"})
 
 
 def search_command(settings, campaign, task, mode, python=PYTHON):
@@ -263,6 +270,128 @@ def search_command(settings, campaign, task, mode, python=PYTHON):
           for key, value in (("model", "model"), ("base_url", "provider"))]]
 
 
+def released_job(job_id):
+    """Require scheduler evidence, never trust a stale local PID or elapsed time."""
+    if not str(job_id).isdigit():
+        raise RuntimeError("Invalid previous Slurm job ID")
+    active = run(["squeue", "--noheader", "--format=%i", "--user", os.environ["USER"]], capture_output=True, text=True)
+    if str(job_id) in active.stdout.split():
+        raise RuntimeError("Previous allocation is still queued/running/completing")
+    result = run(["sacct", "-X", "-n", "-P", "-j", job_id, "--format=JobIDRaw,State,End"],
+                 capture_output=True, text=True, env={**os.environ, "TZ": "UTC"})
+    rows = [line.split("|") for line in result.stdout.splitlines() if line.split("|")[0] == str(job_id)]
+    if len(rows) != 1:
+        raise RuntimeError("Slurm accounting has not published an unambiguous final record; retry later")
+    _, state, end, *_ = rows[0]
+    state = state.split()[0].rstrip("+")
+    if state not in {"PREEMPTED", "TIMEOUT", "CANCELLED", "NODE_FAIL", "FAILED"}:
+        raise RuntimeError(f"Job is not a recoverable interruption: {state}")
+    ended = datetime.fromisoformat(end).replace(tzinfo=timezone.utc).timestamp()
+    return {"job_id": str(job_id), "state": state, "ended_epoch": ended}
+
+
+def recovery_record(output, release):
+    segment = read(output / "segment.json")
+    if segment["job_id"] != release["job_id"]:
+        raise RuntimeError("Release evidence does not match the last search segment")
+    result = read(output / "result.json") if (output / "result.json").exists() else {}
+    if result.get("state") == "complete":
+        raise RuntimeError("Completed runs cannot be resumed")
+    if release["state"] == "FAILED" and result.get("state") != "interrupted":
+        raise RuntimeError("A program/infrastructure failure needs investigation, not automatic replay")
+    logs = Path(read(output / "run-info.json")["log_dir"])
+    journal = read(logs / "journal.json")
+    if journal.get("evaluation_state", {}).get("failure"):
+        raise RuntimeError("Shared evaluator failure cannot be resumed")
+    # Stop charging at the process exit if the supervisor recorded it; otherwise
+    # Slurm's final End is a conservative upper bound. Queue downtime is excluded.
+    ended = min(release["ended_epoch"], segment.get("ended_epoch", release["ended_epoch"]))
+    heartbeat = logs / "competition_heartbeat.json"
+    clock_start = segment["started_epoch"] - segment.get("active_offset", 0.)
+    if heartbeat.exists():
+        beat = read(heartbeat)
+        if beat["updated_epoch"] >= segment["started_epoch"]:
+            clock_start = beat["agent_start_epoch"]
+    elapsed = max(journal.get("elapsed_active_seconds", 0.), ended - clock_start)
+    return {**release, "ended_epoch": ended, "elapsed_seconds": math.ceil(elapsed),
+            "run_dir": str(logs.parent), "source_job": segment["job_id"]}
+
+
+def reconcile_recovery(output, recovery):
+    logs = Path(recovery["run_dir"]) / "logs"
+    ledger = logs / "phase1/root_draft_state.json"
+    state = read(ledger)
+    state["executor_release_receipt"] = {"owner_host": state["owner_host"],
+        "owner_pid": state["owner_pid"], "job_id": recovery["source_job"],
+        "verified_by": "slurm_allocation_release"}
+    save(ledger, state)
+    for path in (logs / "mf_execution").glob("*.json"):
+        record = read(path)
+        if record["state"] == "running":
+            record["elapsed_seconds"] += max(0., recovery["ended_epoch"] - record["started_epoch"])
+            record["state"] = "interrupted"
+            save(path, record)
+
+
+def resume(args):
+    settings = ready(args.campaign)
+    if args.task not in settings["spec"]["tasks"] or args.mode not in settings["spec"]["modes"]:
+        raise ValueError("Provide the registered --task and --mode to recover")
+    output = args.campaign / "tasks" / args.task / args.mode
+    with submission_lock(args.campaign):
+        segment = read(output / "segment.json")
+        recovery = recovery_record(output, released_job(segment["job_id"]))
+        resources = settings["spec"]["tasks"][args.task]
+        save(output / "recovery.json", recovery)
+        command = batch_command(args.campaign, args.partition, resources["cpus"], resources["memory_gb"],
+            settings["spec"]["slurm_time"], ["worker", "--task", args.task, "--mode", args.mode, "--resume-run"], gpu=True)
+        sbatch(args.campaign, f"{args.task}/{args.mode}/resume-after-{segment['job_id']}", command)
+
+
+def run_search(command, env, output, active_offset=0):
+    """Keep the supervisor alive through TERM long enough to save and release."""
+    interrupted = []
+    proc = None
+    def pause(signum, frame):
+        interrupted.append(time.monotonic())
+        if proc is not None and proc.poll() is None:
+            try:
+                proc.send_signal(signal.SIGUSR1)
+            except ProcessLookupError:
+                pass
+    prior = {s: signal.signal(s, pause) for s in (signal.SIGTERM, signal.SIGUSR1)}
+    record = {"job_id": os.environ["SLURM_JOB_ID"], "started_epoch": time.time(), "active_offset": active_offset}
+    save(output / "segment.json", record)
+    try:
+        proc = subprocess.Popen(command, cwd=ROOT, env=env, start_new_session=True)
+        while proc.poll() is None:
+            if interrupted and time.monotonic() - interrupted[0] > 20:
+                try:
+                    os.killpg(proc.pid, signal.SIGKILL)
+                except ProcessLookupError:
+                    pass
+                break
+            time.sleep(.2)
+        code = proc.wait()
+        record.update(ended_epoch=time.time(), returncode=code)
+        save(output / "segment.json", record)
+        save(output / "segments" / f"{record['job_id']}.json", record)
+        if interrupted or code in (75, -signal.SIGTERM, -signal.SIGKILL):
+            save(output / "result.json", {"state": "interrupted", "job_id": record["job_id"]})
+            raise SystemExit(75)
+        if code:
+            raise subprocess.CalledProcessError(code, command)
+    finally:
+        if proc is not None:
+            try:
+                os.killpg(proc.pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+            proc.wait()
+        for sig, handler in prior.items():
+            signal.signal(sig, handler)
+
+
 def worker(args):
     require_allocation()
     # sbatch may invoke system Python; re-exec into the prepared environment.
@@ -275,7 +404,7 @@ def worker(args):
     env = environment(settings)
     output = args.campaign / "tasks" / args.task / args.mode
     output.mkdir(parents=True, exist_ok=True)
-    if (output / "run-info.json").exists():
+    if (output / "run-info.json").exists() and not args.resume_run:
         raise RuntimeError("Existing run found; automatic restarting/re-budgeting is prohibited")
     try:
         import torch
@@ -290,6 +419,9 @@ def worker(args):
             "cpu_affinity": sorted(os.sched_getaffinity(0)), "job_id": os.environ["SLURM_JOB_ID"]})
         run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--require-cuda", "--embedding",
              "--output", output / "environment.json"], env=env)
+        for name in ("hardware", "environment"):
+            save(output / "segments" / f"{os.environ['SLURM_JOB_ID']}-{name}.json",
+                 read(output / f"{name}.json"))
         from types import SimpleNamespace
         sys.path.insert(0, str(ROOT))
         from tasks.mlebench_lite.run_bo import audit_protocol
@@ -299,8 +431,17 @@ def worker(args):
         if read(args.campaign / "protocols" / args.task / "protocol.json")["protocol_id"] != prepared["protocol_id"]:
             raise RuntimeError("Protocol differs from the prepared campaign")
         command = search_command(settings, args.campaign, args.task, args.mode)
+        active_offset = 0
+        if args.resume_run:
+            recovery = read(output / "recovery.json")
+            # Verify again when the replacement allocation actually starts.
+            released_job(recovery["source_job"])
+            reconcile_recovery(output, recovery)
+            command += [f"resume_run_dir={recovery['run_dir']}", f"resume_elapsed_seconds={recovery['elapsed_seconds']}"]
+            active_offset = recovery["elapsed_seconds"]
         save(output / "command.json", command)
-        run(command, env=env)
+        save(output / "segments" / f"{os.environ['SLURM_JOB_ID']}-command.json", command)
+        run_search(command, env, output, active_offset)
         logs = Path(read(output / "run-info.json")["log_dir"])
         from omegaconf import OmegaConf
         cfg = OmegaConf.load(logs / "config.yaml")
@@ -355,7 +496,7 @@ def collect(args):
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=("submit-prepare", "prepare", "submit-preflight", "preflight", "submit", "worker", "collect"))
+    parser.add_argument("command", choices=("submit-prepare", "prepare", "submit-preflight", "preflight", "submit", "resume", "worker", "collect"))
     parser.add_argument("--campaign", type=Path, default=ROOT / "runs/mf14_aq05")
     parser.add_argument("--partition", help="Your available Slurm partition; required for submissions")
     parser.add_argument("--key-file", type=Path)
@@ -364,14 +505,16 @@ def main():
     parser.add_argument("--tasks", nargs="+")
     parser.add_argument("--task")
     parser.add_argument("--mode", choices=("carry_over", "reset"))
+    parser.add_argument("--resume-run", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     args.campaign = args.campaign.resolve()
-    if args.command.startswith("submit") and not args.partition:
+    if (args.command.startswith("submit") or args.command == "resume") and not args.partition:
         parser.error("Provide --partition for your Mila account")
     if args.command == "submit-prepare" and (args.key_file is None or args.token_file is None):
         parser.error("Provide --key-file and --token-file paths (never raw credentials)")
     {"submit-prepare": submit_preparation, "prepare": prepare, "submit": submit,
      "submit-preflight": submit_preflight, "preflight": preflight,
+     "resume": resume,
      "worker": worker, "collect": collect}[args.command](args)
 
 

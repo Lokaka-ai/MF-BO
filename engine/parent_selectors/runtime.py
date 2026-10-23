@@ -614,14 +614,13 @@ class Phase1SelectorRuntime:
 
     @staticmethod
     def _owner_alive(state) -> bool:
+        receipt = state.get("executor_release_receipt", {})
+        if (receipt.get("owner_host") == state.get("owner_host")
+                and receipt.get("owner_pid") == state.get("owner_pid")
+                and receipt.get("verified_by") == "slurm_allocation_release"
+                and receipt.get("job_id")):
+            return False
         if state.get("owner_host") != socket.gethostname():
-            # NanoGPT segmented runs can move after Slurm releases the old executor.
-            receipt = state.get("executor_release_receipt", {})
-            if (receipt.get("owner_host") == state.get("owner_host")
-                    and receipt.get("owner_pid") == state.get("owner_pid")
-                    and receipt.get("verified_by") == "slurm_allocation_release"
-                    and receipt.get("job_id")):
-                return False
             raise RuntimeError("Pending decisions belong to another host; reconcile their executor before resuming")
         try:
             os.kill(state["owner_pid"], 0)
@@ -714,6 +713,7 @@ class Phase1SelectorRuntime:
 
     def _reconcile_pending(self, agent):
         from engine.competition_checkpoint import enabled as competition_checkpoint_enabled
+        from engine.mf_recovery import enabled as mf_recovery_enabled
         recover_interrupted = competition_checkpoint_enabled(agent.cfg)
         state = self.root_draft_state
         for decision_id, pending in list(state["pending"].items()):
@@ -735,10 +735,11 @@ class Phase1SelectorRuntime:
                         (record.metadata or {}).get("continuation_node_id") or record.child_node_id)
                 del state["pending"][decision_id]
             elif recover_interrupted and pending["status"] in {"submitted", "reserved"} and (
-                    pending["status"] == "submitted" or pending.get("recovery_already_submitted")):
+                    mf_recovery_enabled(agent.cfg) or pending["status"] == "submitted" or pending.get("recovery_already_submitted")):
                 # Replay the frozen decision, without another selection, draft
                 # charge, acquisition draw, or synthetic failed observation.
-                pending.update(status="reserved", recovery_already_submitted=True)
+                already_submitted = pending["status"] == "submitted" or pending.get("recovery_already_submitted", False)
+                pending.update(status="reserved", recovery_already_submitted=already_submitted)
                 self.recovered_generation_contexts.append(self._thaw_context(agent, pending))
             elif pending["status"] == "reserved":
                 del state["pending"][decision_id]

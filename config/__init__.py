@@ -516,7 +516,9 @@ def save_run(cfg: Config, journal):
     serialize.dump_json(journal, cfg.log_dir / "journal.json")
     serialize.dump_json(filtered_journal, cfg.log_dir / "filtered_journal.json")
     # save config
-    OmegaConf.save(config=cfg, f=cfg.log_dir / "config.yaml")
+    config_temp = cfg.log_dir / "config.yaml.tmp"
+    OmegaConf.save(config=cfg, f=config_temp)
+    config_temp.replace(cfg.log_dir / "config.yaml")
     
     # save the best found solution
     best_node = journal.get_best_node()

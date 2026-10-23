@@ -20,6 +20,10 @@ from utils import serialize
 
 @pytest.fixture
 def competition(tmp_path, monkeypatch, request):
+    if not hasattr(os, 'sched_getaffinity'):
+        monkeypatch.setattr('engine.parent_selectors.acq7_selector.os',
+                            SimpleNamespace(environ=os.environ,
+                                            sched_getaffinity=lambda _: set(range(os.cpu_count()))))
     clock = [1000.]
     monkeypatch.setattr('time.time', lambda: clock[0])
     monkeypatch.setattr(Phase1SelectorRuntime, '_owner_alive', lambda *a: False)

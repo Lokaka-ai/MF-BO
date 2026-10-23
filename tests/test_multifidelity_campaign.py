@@ -59,6 +59,7 @@ class CampaignTests(unittest.TestCase):
                 self.assertIn("--gres=gpu:a100l:1", argv)
                 self.assertIn("--time=13:00:00", argv)
                 wrapper = shlex.split(next(x[7:] for x in argv if x.startswith("--wrap=")))
+                self.assertEqual(wrapper[0], "exec")
                 self.assertEqual(wrapper[-1], str(self.path))
             campaign.submit(args)
             self.assertEqual(run.call_count, 28)

@@ -32,7 +32,25 @@ This is not the Linux CUDA lockfile environment.
 - Remaining verification requires Mila: the locked Linux environment, actual
   A100/driver compatibility, provider credentials, task data/protocol semantics
   and cluster scheduling. High-memory jobs require preemptible `long` under the
-  documented limits; automatic resume is not implemented.
+  documented limits; explicit recovery is implemented as described below.
+
+## Interruption recovery — 2026-10-22
+
+- Final combined run: 32 tests passed in 79.52s across legacy checkpoint,
+  MF recovery and campaign launcher suites. The six launcher tests passed again
+  after enforcing shell `exec` so Slurm signals reach the Python supervisor.
+- Ten recovery tests passed: actual process-group SIGKILL during candidate
+  execution in each mode and fidelity stage (four cases), signal-driven
+  checkpoint/supervisor exit, reserved/submitted generation replay (two cases),
+  live-job refusal, queue-time/failure accounting, and duplicate resume submission.
+- The six existing integration cases also passed with recovery enabled (65.95s).
+- Recovery retains frozen generated code, decision identity, saved search state
+  and stage; it charges interrupted search/candidate time and avoids duplicate
+  BO observations. Incomplete training restarts; model weights are not saved.
+- These tests use synthetic model replies and simulated Slurm accounting;
+  CPU training and process interruption are real. They do not certify live
+  scheduler behavior, CUDA execution or provider access. Both CPU preparation
+  and the short GPU preflight include the recovery suite.
 
 ## Earlier package checks — 2026-10-21 (dependency limitation superseded)
 

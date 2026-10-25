@@ -483,7 +483,9 @@ class Phase1SelectorRuntime:
         is_agent = str(cfg.parent_selector.type) == "agent_selector"
         saved_agent = bool(saved and saved.get("feature_schema_version") == AGENT_SCHEMA)
         is_study7 = str(cfg.parent_selector.type) in {*STUDY7_SELECTORS, *BRANCH7_SELECTORS, *ACQ7_SELECTORS, *RATING_ONLY_SELECTORS}
-        saved_study7 = bool(saved and saved.get("feature_schema_version") in {STATE4_SCHEMA, GREEDY_SCHEMA, *BRANCH7_SCHEMAS, ACQ7_SCHEMA, RATING_ONLY_SCHEMA})
+        saved_study7 = bool(saved and saved.get("feature_schema_version") in {STATE4_SCHEMA, GREEDY_SCHEMA, *BRANCH7_SCHEMAS, ACQ7_SCHEMA, RATING_ONLY_SCHEMA, "mf_gp_v1"})
+        if journal.nodes and ((saved or {}).get("feature_schema_version") == "mf_gp_v1") != (getattr(getattr(cfg, "evaluation", None), "multifidelity_mode", None) == "mf_gp"):
+            raise ValueError("Cannot resume across MF-GP and other modes")
         if journal.nodes and is_study7 != saved_study7:
             raise ValueError("Cannot resume across study7 and native selector contracts")
         if journal.nodes and is_agent != saved_agent:
@@ -535,10 +537,11 @@ class Phase1SelectorRuntime:
                             agent_config=self.selectors[self.selector_type].contract())
         if self.study7_enabled:
             contract.update(feature_schema_version=self.feature_schema_version,
-                feature_dimension=(6 if self.branch7_gp6_enabled else 0 if self.study7_selector.greedy else 4),
+                feature_dimension=(8 if self.feature_schema_version == "mf_gp_v1" else 6 if self.branch7_gp6_enabled else 0 if self.study7_selector.greedy else 4),
                 target=("continuous_child_quality" if self.branch7_gp6_enabled
                         else "agent_rating_only" if self.rating_only_enabled
-                        else "parent_metric" if self.study7_selector.greedy else "valid_ordinary_proposal_residual"),
+                        else "parent_metric" if self.study7_selector.greedy else
+                        "absolute_signed_quality" if self.feature_schema_version == "mf_gp_v1" else "valid_ordinary_proposal_residual"),
                 selector_type=self.selector_type, study7=self.study7_selector.contract(),
                 task_protocol_id=getattr(getattr(agent, "autoresearch", None), "protocol_id", None))
         if getattr(agent, "fixed_evaluation", None):
@@ -1836,6 +1839,9 @@ class Phase1SelectorRuntime:
                     "decision_timestamp": context.decision.timestamp,
                     **({"target_available": False, "target_status": "deferred_long_horizon_target"}
                        if context.option.operator in {"improve", "evolution", "fusion", "debug"} else {})})
+            if self.feature_schema_version == "mf_gp_v1" and child_node is not None:
+                if getattr(parent_node, "training_fraction", None) != child_node.training_fraction:
+                    record = replace(record, improvement=None)
             from tasks.autoresearch.study7_budget import outcome_metadata
             budget = outcome_metadata(self._agent, child_node)
             if budget:
@@ -1919,6 +1925,9 @@ class Phase1SelectorRuntime:
             timestamp=utc_timestamp(),
         )
         if getattr(self, "_agent", None) is not None:
+            if self.feature_schema_version == "mf_gp_v1" and child_node is not None:
+                if getattr(parent_node, "training_fraction", None) != child_node.training_fraction:
+                    record = replace(record, improvement=None)
             from tasks.autoresearch.study7_budget import outcome_metadata
             record = replace(record, metadata=outcome_metadata(self._agent, child_node))
         if self.legacy_checkpoint:

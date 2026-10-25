@@ -30,6 +30,9 @@ import torch
 
 def run():
     cfg = load_cfg()
+    if getattr(cfg.evaluation, "multifidelity_mode", None) == "mf_gp":
+        from engine.mf_gp.runner import run as run_mf_gp
+        return run_mf_gp(cfg)
     run_info = {"log_dir": str(cfg.log_dir), "workspace_dir": str(cfg.workspace_dir), "fixed_evaluation": fixed_enabled(cfg)}
     if cfg.run_result_file:
         result_path = Path(cfg.run_result_file)

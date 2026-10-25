@@ -32,7 +32,14 @@ def host_evidence(agent, node):
         raise RuntimeError("Redesign evidence attempt mismatch")
     if type(result.get("valid")) is not bool:
         raise RuntimeError("Malformed redesign host evidence")
-    return {"available": True, "valid": result["valid"],
+    extra = {}
+    if getattr(agent.cfg.evaluation, "multifidelity_mode", None) == "mf_gp":
+        selector = agent.phase1_runtime.study7_selector
+        extra = {"training_fraction": node.training_fraction,
+                 "evaluation_history": [{"training_fraction": o["fidelity"], "valid": o["valid"],
+                    "metric": (o.get("result") or {}).get("metric")}
+                    for o in selector.observations if o["program_id"] == node.id]}
+    return {**extra, "available": True, "valid": result["valid"],
             "metric": result.get("metric") if result["valid"] else None,
             "n_scored": result.get("n_scored"), "n_expected": result.get("n_expected"),
             "error": prose(result.get("error"), 400)}

@@ -405,7 +405,7 @@ class FixedEvaluation:
         is_resume = bool(journal.nodes)
         state = getattr(journal, "evaluation_state", None)
         mode = getattr(cfg.evaluation, "multifidelity_mode", None)
-        if mode is not None and (mode not in MODES or not cfg.evaluation.enabled
+        if mode is not None and (mode not in getattr(cls, "allowed_modes", MODES) or not cfg.evaluation.enabled
                                  or str(cfg.parent_selector.type) != "acq7_gp4"
                                  or str(cfg.study7.method_id) not in {"AQ04", "AQ05"}):
             raise EvaluationError("Multi-fidelity requires fixed evaluation and AQ04/AQ05; choose carry_over or reset")
@@ -640,6 +640,9 @@ def finalize_submission(cfg, journal=None):
     if journal is None:
         journal = serialize.load_json(Path(cfg.log_dir) / "journal.json", Journal)
     state = journal.evaluation_state
+    if state and state.get("multifidelity_mode") == "mf_gp":
+        from engine.mf_gp.execution import finalize
+        return finalize(cfg, journal)
     if not state:
         raise EvaluationError("No fixed protocol journal available for final submission")
     candidates = [n for n in journal.nodes if n.stage != "root" and n.is_valid is True and n.is_buggy is False

@@ -57,7 +57,12 @@ class AgentSearch:
             raise EvaluationError("A fixed-evaluation checkpoint cannot resume in legacy mode")
         self.fixed_evaluation = None
         if fixed_enabled(cfg):
-            self.fixed_evaluation = FixedEvaluation.prepare_or_load(cfg, task_desc, journal)
+            from engine.mf_gp import enabled as mf_gp_enabled
+            evaluator_type = FixedEvaluation
+            if mf_gp_enabled(cfg):
+                from engine.mf_gp.execution import MFEvaluation
+                evaluator_type = MFEvaluation
+            self.fixed_evaluation = evaluator_type.prepare_or_load(cfg, task_desc, journal)
         if is_resume and self.journal.task_desc is not None:
             self.task_desc = self.journal.task_desc
         else:
@@ -147,7 +152,12 @@ class AgentSearch:
             self.metric_maximize_reasoning = "Restored from the root-draft checkpoint."
         else:
             result_parse_agent.determine_metric_direction(self)
-        self.phase1_runtime = Phase1SelectorRuntime(cfg)
+        from engine.mf_gp import enabled as mf_gp_enabled
+        runtime_type = Phase1SelectorRuntime
+        if mf_gp_enabled(cfg):
+            from engine.mf_gp.controller import MFRuntime
+            runtime_type = MFRuntime
+        self.phase1_runtime = runtime_type(cfg)
         self.phase1_runtime.bind_agent(self, resuming=is_resume)
         if (self.fixed_evaluation and self.fixed_evaluation.multifidelity_mode == "reset"
                 and self.fixed_evaluation.multifidelity_phase == "full"):
@@ -368,6 +378,8 @@ class AgentSearch:
             return exec_callback(node.code, node.id, True)
         remaining = self.acfg.time_limit - (time.time() - self.start_time)
         context = self.fixed_evaluation.begin_attempt(node, remaining)
+        if context.get("working_dir"):
+            return exec_callback(self.fixed_evaluation.executable(node.code), node.id, True, working_dir=context["working_dir"], evaluation_context=context)
         return exec_callback(node.code, node.id, True, evaluation_context=context)
 
     def _check_evaluator_health(self):

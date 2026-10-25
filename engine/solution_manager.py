@@ -96,6 +96,20 @@ def update_top_candidates(agent, new_node: SearchNode) -> None:
     if not new_node or new_node.is_buggy or not new_node.metric or new_node.metric.value is None or new_node.is_valid is False:
         return
 
+    if getattr(getattr(getattr(agent, "cfg", None), "evaluation", None), "multifidelity_mode", None) == "mf_gp":
+        from engine.mf_gp.evidence import quality
+        pool = {n.id:n for n in agent.top_candidates}
+        pool[new_node.id] = new_node
+        ranked = sorted(pool.values(), key=lambda n: quality(agent,n), reverse=True)
+        counts = defaultdict(int)
+        kept = []
+        for n in ranked:
+            if counts[n.branch_id] < 5:
+                kept.append(n)
+                counts[n.branch_id] += 1
+        agent.top_candidates = kept[:agent.top_k]
+        return
+
     # Avoid duplicates (by node id)
     existing_ids = {n.id for n in agent.top_candidates}
     if new_node.id not in existing_ids:
@@ -207,6 +221,10 @@ def get_branch_top_nodes(agent, branch_id: int, top_k: int = 3) -> List[SearchNo
 
     maximize = agent.metric_maximize if agent.metric_maximize is not None else True
 
+    if getattr(getattr(getattr(agent, "cfg", None), "evaluation", None), "multifidelity_mode", None) == "mf_gp":
+        from engine.mf_gp.evidence import quality
+        return sorted(successful_nodes, key=lambda n: quality(agent,n), reverse=True)[:top_k]
+
     sorted_nodes = sorted(
         successful_nodes,
         key=lambda n: n.metric.value if n.metric and n.metric.value is not None else (
@@ -226,6 +244,12 @@ def get_branch_top_nodes(agent, branch_id: int, top_k: int = 3) -> List[SearchNo
 def update_best_solution(agent, node):
     """Update top-K candidates and global best node."""
     if not node.metric or node.metric.value is None:
+        return
+
+    if getattr(getattr(getattr(agent, "cfg", None), "evaluation", None), "multifidelity_mode", None) == "mf_gp":
+        from engine.mf_gp.evidence import update_best
+        update_top_candidates(agent,node)
+        update_best(agent)
         return
 
     submission_file_path = agent.cfg.workspace_dir / "submission" / f"submission_{node.id}.csv"

@@ -160,7 +160,8 @@ def prepare(args):
     run(["bash", "tasks/mlebench_lite/setup.sh"], env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
          "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
-         "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py"], env=env)
+         "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
+         *(["tests/test_mf_gp.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
     run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "provider-check.json"], env=env)
@@ -243,7 +244,8 @@ def preflight(args):
          "--output", args.campaign / "gpu-environment.json"], env=env)
     run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "gpu-provider-check.json"], env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-         "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py"], env=env)
+         "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
+         *(["tests/test_mf_gp.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     save(args.campaign / "gpu-ready.json", {
         "settings_sha256": sha(args.campaign / "settings.json"),
         "job_id": os.environ["SLURM_JOB_ID"], "gpu": props.name,
@@ -457,7 +459,17 @@ def worker(args):
                               and len(records) < spec["steps"])
         final = read(logs / "final_submission.json")
         node = next(n for n in journal["nodes"] if n["id"] == final["node_id"])
-        if node.get("training_fraction") != 1.0:
+        if args.mode == "mf_gp":
+            observations = journal["parent_selector_state"]["study7_state"]["observations"]
+            winner = next(o for o in observations if o["transition_id"] == final["evaluation_id"])
+            if (winner["program_id"] != node["id"] or winner["fidelity"] != 1.0
+                    or not winner["valid"] or not winner.get("budget_eligible", True)
+                    or winner["result"]["metric"] != final["metric"]):
+                raise RuntimeError("Winner is not a completed full-data MF evaluation")
+            completed_actions = len(records) + sum(o["kind"] == "promotion" for o in observations)
+            ended_before_limit = (journal["elapsed_active_seconds"] < spec["time_limit_seconds"]
+                                  and completed_actions < spec["steps"])
+        elif node.get("training_fraction") != 1.0:
             raise RuntimeError("Winner was not trained on full T")
         grade = run([PYTHON, "-m", "utils.grade_submission", "--log-dir", logs,
                      "--data-dir", settings["data_dir"]], env=env, capture_output=True, text=True)
@@ -494,17 +506,17 @@ def collect(args):
     print(json.dumps(rows, indent=2))
 
 
-def main():
+def main(*, modes=("carry_over", "reset"), default_campaign=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("submit-prepare", "prepare", "submit-preflight", "preflight", "submit", "resume", "worker", "collect"))
-    parser.add_argument("--campaign", type=Path, default=ROOT / "runs/mf14_aq05")
+    parser.add_argument("--campaign", type=Path, default=default_campaign or ROOT / "runs/mf14_aq05")
     parser.add_argument("--partition", help="Your available Slurm partition; required for submissions")
     parser.add_argument("--key-file", type=Path)
     parser.add_argument("--token-file", type=Path)
     parser.add_argument("--data-dir", type=Path, default=ROOT / "data/mlebench")
     parser.add_argument("--tasks", nargs="+")
     parser.add_argument("--task")
-    parser.add_argument("--mode", choices=("carry_over", "reset"))
+    parser.add_argument("--mode", choices=modes)
     parser.add_argument("--resume-run", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
     args.campaign = args.campaign.resolve()

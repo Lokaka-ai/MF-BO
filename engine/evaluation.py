@@ -29,6 +29,14 @@ def backpropagate(node: SearchNode, value: float, add_to_tree=True):
 
 def get_node_reward(agent, node: SearchNode):
     reward = 0
+    if getattr(getattr(getattr(agent, "cfg", None), "evaluation", None), "multifidelity_mode", None) == "mf_gp":
+        if node.is_buggy is not False or node.is_valid is not True:
+            return -1
+        selector = agent.phase1_runtime.study7_selector
+        comparable = [o["utility"] for o in selector.observations if o["valid"]
+                      and o["fidelity"] == node.training_fraction and o.get("budget_eligible", True)]
+        value = node.metric.value * (1 if agent.metric_maximize else -1)
+        return 1.5 if not comparable or value > max(comparable) else 1.
 
     if node.is_buggy is True or node.is_buggy is None:
         reward = -1

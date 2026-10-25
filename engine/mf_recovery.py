@@ -12,7 +12,7 @@ import logging
 def enabled(cfg):
     return (os.environ.get("MLEVOLVE_MF_RECOVERY") == "1"
             and cfg.evaluation.enabled
-            and cfg.evaluation.multifidelity_mode in {"carry_over", "reset"})
+            and cfg.evaluation.multifidelity_mode in {"carry_over", "reset", "mf_gp"})
 
 
 def install(agent, persist):

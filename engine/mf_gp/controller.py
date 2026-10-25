@@ -81,7 +81,13 @@ class MFSelector:
                     operator=operator,
                     parent_id=r.parent_node_id,
                     code_sha256=code_hash(node.get("code", "")),
-                    initial=bool(mf.get("initial", False)),
+                    initial=bool(mf.get("initial", False))
+                    or (
+                        r.operator == "debug"
+                        and self.programs.get(r.parent_node_id, {}).get(
+                            "initial", False
+                        )
+                    ),
                 )
                 old = self.programs.setdefault(r.child_node_id, program)
                 if old != program:
@@ -270,14 +276,18 @@ class MFSelector:
         rows += [p["row"] for p in self.pending_promotions.values()]
         return rows
 
+    def remaining_budget(self, agent):
+        remaining = float(agent.acfg.time_limit) - (time.time() - agent.start_time)
+        cheap, _, generation, full_guard = self.costs()
+        if 1.5 * (cheap + generation) + full_guard > remaining:
+            self.terminal = True
+        return remaining
+
     def select(self, agent, options):
         self.observe(self.records_provider())
         self._fit(freeze=True)
-        remaining = float(agent.acfg.time_limit) - (time.time() - agent.start_time)
+        remaining = self.remaining_budget(agent)
         pending = self.pending_rows(agent)
-        cheap_cost, _, generation_cost, full_guard = self.costs()
-        if 1.5 * (cheap_cost + generation_cost) + full_guard > remaining:
-            self.terminal = True
         completed_high = {
             o["program_id"] for o in self.observations if o["fidelity"] == 1.0
         }
@@ -517,6 +527,25 @@ class MFRuntime(Phase1SelectorRuntime):
         self.selectors[self.selector_type] = self.study7_selector
         self.feature_schema_version = "mf_gp_v1"
 
+    def _forced_result(self, agent, parent_node, **kwargs):
+        # Native repair/aggregation bypasses still obey MF fidelity and cost
+        # guards. An unaffordable bypass must not launch cheap work at deadline.
+        if kwargs.get("reason") != "initial_draft_bypass":
+            selector = self.study7_selector
+            remaining = selector.remaining_budget(agent)
+            cheap, _, generation, full_guard = selector.costs()
+            fidelity = (
+                1.0
+                if selector.terminal
+                else (getattr(parent_node, "training_fraction", None) or 0.5)
+            )
+            guard = 1.5 * generation + full_guard
+            if fidelity == 0.5:
+                guard += 1.5 * cheap
+            if guard > remaining:
+                return selector.select(agent, self._normal_options(agent))
+        return super()._forced_result(agent, parent_node, **kwargs)
+
     def _rank_options(self, agent, options):
         # Promotions are controller actions, not native selector failures.
         return self.study7_selector.select(agent, options)
@@ -547,6 +576,25 @@ class MFRuntime(Phase1SelectorRuntime):
             return super()._select_global_with_root(agent)
         if not self._budget_available(agent):
             raise SearchExhausted("MF search budget exhausted")
+        # The native worker would debug its failed continuation next. The MF
+        # runner returns to global selection, so expose that same forced repair
+        # before normal acquisition; never reserve two repairs of one program.
+        from engine.operator_preview import preview_next_operator
+
+        pending_parents = self._pending_parent_ids()
+        for node in agent.journal.nodes:
+            if (
+                node.stage != "root"
+                and node.id not in pending_parents
+                and not node.is_terminal
+                and not node.lock
+                and not node.reached_child_limit(agent.scfg)
+            ):
+                preview = preview_next_operator(agent, node)
+                if preview.operator == "debug":
+                    return self._forced_result(
+                        agent, node, preview=preview, reason="special_path_bypass"
+                    )
         # Keep native normal-operation previews, feasibility/debug and
         # aggregation bypasses. Promotions can still run when parents expire.
         options = self._normal_options(agent)
@@ -579,6 +627,8 @@ class MFRuntime(Phase1SelectorRuntime):
         return selector.select(agent, options)
 
     def _budget_available(self, agent):
+        if time.time() - agent.start_time >= float(agent.acfg.time_limit):
+            return False
         if not super()._budget_available(agent):
             return False
         selector = self.study7_selector
@@ -589,7 +639,7 @@ class MFRuntime(Phase1SelectorRuntime):
             [
                 p
                 for p in self.root_draft_state["pending"].values()
-                if p["status"] == "reserved"
+                if p["status"] == "reserved" and not p.get("recovery_already_submitted")
             ]
         ) + promotions < int(agent.acfg.steps)
 
@@ -605,7 +655,7 @@ class MFRuntime(Phase1SelectorRuntime):
     def _record_root_terminal(self, **kwargs):
         row = super()._record_root_terminal(**kwargs)
         node = kwargs.get("child_node")
-        if node is not None and node.is_valid is True:
+        if node is not None:
             # MF workers return completed programs to the global legal pool.
             # The staged runner instead passes the locked continuation directly
             # to its owning worker. Pending reservations still prevent reuse.

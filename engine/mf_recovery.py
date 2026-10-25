@@ -10,9 +10,9 @@ import logging
 
 
 def enabled(cfg):
-    return (os.environ.get("MLEVOLVE_MF_RECOVERY") == "1"
-            and cfg.evaluation.enabled
-            and cfg.evaluation.multifidelity_mode in {"carry_over", "reset", "mf_gp"})
+    return (cfg.evaluation.enabled and (cfg.evaluation.multifidelity_mode == "mf_gp"
+            or (os.environ.get("MLEVOLVE_MF_RECOVERY") == "1"
+                and cfg.evaluation.multifidelity_mode in {"carry_over", "reset"})))
 
 
 def install(agent, persist):
@@ -50,6 +50,9 @@ def install(agent, persist):
 
 
 def execute(interpreter, cfg, code, node_id, *args, **kwargs):
+    if cfg.evaluation.multifidelity_mode == "mf_gp":
+        from engine.mf_gp.recovery import execute as execute_mf_gp
+        return execute_mf_gp(interpreter, cfg, code, node_id, *args, **kwargs)
     from engine.competition_checkpoint import atomic_json
     from engine.executor import ExecutionResult
     path = Path(cfg.log_dir) / "mf_execution" / f"{node_id}.json"

@@ -27,6 +27,9 @@ from utils import serialize
     "gp7_short_logei_pibo", "gp7_long_horizon_ucb_pibo", "gp7_short_ucb_pibo",
 ])
 def test_interruption_preserves_shared_drafts_queue_and_native_results(setting, workers, tmp_path, monkeypatch):
+    if not hasattr(os, "sched_getaffinity"):
+        monkeypatch.setattr("engine.parent_selectors.acq7_selector.os",
+                            SimpleNamespace(environ=os.environ, sched_getaffinity=lambda _: set(range(os.cpu_count() or 1))))
     src = REPO.parents[2]
     cfg = OmegaConf.merge(_load_cfg(use_cli_args=False), OmegaConf.load(src / "tasks/autoresearch/config.yaml"),
                          OmegaConf.load(src / f"config/experiments/{setting}.yaml"))
@@ -36,7 +39,7 @@ def test_interruption_preserves_shared_drafts_queue_and_native_results(setting, 
     cfg.agent.search.parallel_search_num = workers; cfg.cpu_number = 4
     cfg.agent.steps = 3
     task = AutoresearchTask(cfg)
-    cfg.shared_draft_pool = str(make_pool(tmp_path / "pool", task.protocol_id, candidate_body((REPO / "train.py").read_text())))
+    cfg.shared_draft_pool = str(make_pool(tmp_path / "pool", task.protocol_id, candidate_body((REPO / "train.py").read_text()), model=cfg.agent.code.model))
     check = tmp_path / "checkpoints"
     monkeypatch.setenv("MLEVOLVE_SEGMENT_CHECKPOINT", str(check))
     monkeypatch.setenv("MLEVOLVE_SEGMENT_PAUSE_FILE", str(tmp_path / "pause"))

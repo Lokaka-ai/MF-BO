@@ -210,7 +210,11 @@ class Interpreter:
 
             code = self.isolate_submission_path(code=code, _id=id)
             code = self.isolate_model_path(code=code, _id=id)
-            code = pre_code + code
+            if evaluation_context and evaluation_context.get("mf_preserve_future_imports"):
+                from engine.mf_gp.execution import insert_setup
+                code = insert_setup(code, pre_code)
+            else:
+                code = pre_code + code
 
             # decide runfile location and cwd
             run_wd = Path(working_dir).resolve() if working_dir is not None else self.working_dir

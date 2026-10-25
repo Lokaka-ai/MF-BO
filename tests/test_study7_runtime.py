@@ -37,6 +37,10 @@ def load_setting(setting):
 
 @pytest.fixture
 def factory(tmp_path, monkeypatch, autoresearch_cache):
+    import os
+    if not hasattr(os, "sched_getaffinity"):
+        monkeypatch.setattr("engine.parent_selectors.acq7_selector.os",
+                            NS(environ=os.environ, sched_getaffinity=lambda _: set(range(os.cpu_count() or 1))))
     clock, charges, feedbacks, generations, memories = [1_000_000.], [], [], [], []
     state = NS(fail_execution=False, fail_review=None, rating=2)
     monkeypatch.setattr("time.time", lambda: clock[0])
@@ -90,7 +94,7 @@ def factory(tmp_path, monkeypatch, autoresearch_cache):
         cfg.cpu_number = 4
         if shared:
             protocol = AutoresearchTask(cfg).protocol_id
-            cfg.shared_draft_pool = str(make_pool(directory / "pool", protocol, body))
+            cfg.shared_draft_pool = str(make_pool(directory / "pool", protocol, body, model=cfg.agent.code.model))
         agent = AgentSearch((ROOT / "tasks/autoresearch/TASK.md").read_text(), cfg, Journal())
         def execute(code, node_id, *a, **kw):
             if state.fail_execution:

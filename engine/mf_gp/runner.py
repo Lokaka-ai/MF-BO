@@ -3,13 +3,12 @@
 from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from pathlib import Path
 import json
-import logging
 import time
 from omegaconf import OmegaConf
 from config import load_task_desc, prep_agent_workspace, save_run
 from engine.agent_search import AgentSearch
 from engine.executor import Interpreter
-from engine.fixed_evaluation import EvaluationError, finalize_submission
+from engine.fixed_evaluation import finalize_submission
 from engine.search_node import Journal
 from engine.parent_selectors.runtime import SearchExhausted
 from engine.mf_gp.controller import PromotionRequested
@@ -25,7 +24,7 @@ def run(cfg):
         raise ValueError("MF-GP requires the fixed evaluator and redesigned evolution")
     set_global_seed(cfg.agent.seed)
     logger = setup_logging(cfg)
-    if cfg.run_result_file:
+    if getattr(cfg, "run_result_file", None):
         path = Path(cfg.run_result_file)
         path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(
@@ -88,7 +87,17 @@ def run(cfg):
         # Same three-draft initialization: code generation sequentially, then
         # execution in the existing worker budget. Never start extra drafts.
         state = agent.phase1_runtime.root_draft_state
-        for _ in range(max(0, state["initial_goal"] - state["initial_submitted"])):
+        with agent.journal_lock:
+            reserved_initial = sum(
+                p["initial"]
+                and p["status"] == "reserved"
+                and not p.get("recovery_already_submitted")
+                for p in state["pending"].values()
+            )
+            missing_initial = max(
+                0, state["initial_goal"] - state["initial_submitted"] - reserved_initial
+            )
+        for _ in range(missing_initial):
             node = agent.step(None, callback, execute_immediately=False)
             if getattr(node, "pending_execution", False):
                 futures.add(pool.submit(agent.execute_deferred_node, node, callback))

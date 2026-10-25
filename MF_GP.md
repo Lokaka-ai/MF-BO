@@ -67,6 +67,8 @@ one GPU; runtime savings are not assumed to equal the training-data fraction.
 
 ## Isolation and launch
 
+See [MILA_MFGP.md](MILA_MFGP.md) for the packaged campaign and exact protocol-reuse commands.
+
 Use the separate entry point:
 
 ```
@@ -124,7 +126,10 @@ speedups or improved MLE-Bench results. Run the campaign's CPU preparation and
 short GPU/provider preflight on Mila before starting full searches. The new
 campaign explicitly includes `tests/test_mf_gp.py` in both gates.
 
-### Local verification (2026-10-24)
+### Initial local verification (2026-10-24)
+
+**Historical record; superseded by the follow-up fixes and verification in
+[MF_GP_AUDIT.md](MF_GP_AUDIT.md).** The fixture failures below have since been fixed.
 
 - Final `tests/test_mf_gp.py`: **13 passed**, including actual candidate processes,
   two-fidelity views, search completion, promotions, learned-GP restoration and

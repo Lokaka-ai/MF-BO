@@ -10,6 +10,31 @@ from engine.fixed_evaluation import FixedEvaluation, EvaluationError, _write_jso
 from engine.mf_gp.controller import code_hash
 
 
+def insert_setup(code, setup):
+    """Keep valid future imports/docstrings ahead of host execution setup."""
+    import ast
+
+    try:
+        module = ast.parse(code)
+    except SyntaxError:
+        return setup + code  # Let the candidate subprocess report its syntax error.
+    after = 0
+    for index, statement in enumerate(module.body):
+        if (
+            index == 0
+            and isinstance(statement, ast.Expr)
+            and isinstance(statement.value, ast.Constant)
+            and isinstance(statement.value.value, str)
+        ) or (
+            isinstance(statement, ast.ImportFrom) and statement.module == "__future__"
+        ):
+            after = statement.end_lineno
+        else:
+            break
+    lines = code.splitlines(keepends=True)
+    return "".join(lines[:after]).rstrip("\n") + "\n" + setup + "".join(lines[after:])
+
+
 class MFEvaluation(FixedEvaluation):
     allowed_modes = ("mf_gp",)
 
@@ -26,10 +51,10 @@ class MFEvaluation(FixedEvaluation):
 
     def executable(self, code):
         seed = int(self.cfg.agent.seed)
-        return (
+        return insert_setup(
+            code,
             f"import random as _mf_random, numpy as _mf_numpy, torch as _mf_torch\n"
-            f"_mf_random.seed({seed}); _mf_numpy.random.seed({seed}); _mf_torch.manual_seed({seed})\n"
-            + code
+            f"_mf_random.seed({seed}); _mf_numpy.random.seed({seed}); _mf_torch.manual_seed({seed})\n",
         )
 
     def candidate_contract(self):
@@ -56,6 +81,7 @@ class MFEvaluation(FixedEvaluation):
             (work / name).mkdir()
         context["working_dir"] = str(work)
         context["training_fraction"] = fraction
+        context["mf_preserve_future_imports"] = True
         return context
 
     def score(self, node):

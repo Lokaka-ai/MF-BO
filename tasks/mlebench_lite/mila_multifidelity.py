@@ -130,6 +130,9 @@ def submit_preparation(args):
             raise ValueError(f"Credential file does not exist: {path}")
     settings = {"key_file": str(args.key_file.resolve()), "token_file": str(args.token_file.resolve()),
                 "data_dir": str(args.data_dir.resolve()), "spec": read(SPEC), "source": source_hashes()}
+    if getattr(args, "protocol_source", None) is not None:
+        from tasks.mlebench_lite.mfgp_protocols import register_source
+        settings["protocol_source"] = register_source(args.protocol_source, settings["spec"]["tasks"])
     with submission_lock(campaign):
         path = campaign / "settings.json"
         if path.exists() and read(path) != settings:
@@ -161,7 +164,7 @@ def prepare(args):
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
          "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
-         *(["tests/test_mf_gp.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
     run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "provider-check.json"], env=env)
@@ -170,6 +173,9 @@ def prepare(args):
          "--token-file", settings["token_file"], "--workers", "3", "--tasks", *spec["tasks"]], env=env)
     protocols = {}
     for task in spec["tasks"]:
+        if "mf_gp" in spec["modes"]:
+            from tasks.mlebench_lite.mfgp_protocols import attach_source
+            attach_source(settings, args.campaign, task)
         directory = args.campaign / "protocols" / task
         run([PYTHON, "tasks/mlebench_lite/prepare_fixed_protocol.py", "--task", task,
              "--data-root", settings["data_dir"], "--seed", str(spec["seed"]),
@@ -245,7 +251,7 @@ def preflight(args):
     run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "gpu-provider-check.json"], env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
          "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
-         *(["tests/test_mf_gp.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     save(args.campaign / "gpu-ready.json", {
         "settings_sha256": sha(args.campaign / "settings.json"),
         "job_id": os.environ["SLURM_JOB_ID"], "gpu": props.name,
@@ -510,6 +516,9 @@ def main(*, modes=("carry_over", "reset"), default_campaign=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("submit-prepare", "prepare", "submit-preflight", "preflight", "submit", "resume", "worker", "collect"))
     parser.add_argument("--campaign", type=Path, default=default_campaign or ROOT / "runs/mf14_aq05")
+    if "mf_gp" in modes:
+        parser.add_argument("--protocol-source", type=Path,
+            help="Existing baseline campaign's protocols directory; reuse its exact T/V/scorer")
     parser.add_argument("--partition", help="Your available Slurm partition; required for submissions")
     parser.add_argument("--key-file", type=Path)
     parser.add_argument("--token-file", type=Path)

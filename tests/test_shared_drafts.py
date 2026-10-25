@@ -18,7 +18,7 @@ from utils import serialize
 from test_autoresearch import result_for
 
 
-def make_pool(path, protocol="test", code=None):
+def make_pool(path, protocol="test", code=None, model="muse-spark-1.3-contributor"):
     path.mkdir(parents=True, exist_ok=True)
     drafts = []
     for slot in range(1, 6):
@@ -27,7 +27,7 @@ def make_pool(path, protocol="test", code=None):
         atomic_json(target, artifact)
         drafts.append({"slot": slot, "artifact": target.name, "artifact_sha256": sha256(target.read_text()),
                        "code_sha256": sha256(artifact["code"]), "generation_seconds": 10 + slot, "reviewed": True})
-    atomic_json(path / "manifest.json", {"version": 1, "state": "ready", "model": "muse-spark-1.3-contributor",
+    atomic_json(path / "manifest.json", {"version": 1, "state": "ready", "model": model,
                                         "protocol_id": protocol, "drafts": drafts})
     return path / "manifest.json"
 

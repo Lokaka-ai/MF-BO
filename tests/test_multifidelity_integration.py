@@ -45,7 +45,7 @@ def aq05_cfg(fixed_cfg, model_responses, monkeypatch):
 
 
 @pytest.mark.parametrize("mode", ["carry_over", "reset"])
-def test_aq05_half_full_refit_and_winner(aq05_cfg, mode):
+def test_aq05_half_full_refit_and_winner(aq05_cfg, mode, monkeypatch):
     aq05_cfg.evaluation.multifidelity_mode = mode
     agent = AgentSearch("Evaluation: binary log loss.", aq05_cfg, Journal())
     execute = Interpreter(aq05_cfg.workspace_dir, cfg=aq05_cfg, timeout=30).run
@@ -55,7 +55,22 @@ def test_aq05_half_full_refit_and_winner(aq05_cfg, mode):
         assert node.is_valid and node.training_fraction == .5, node.analysis
     runtime = agent.phase1_runtime
     selector = runtime.study7_selector
-    cheap = agent.step(drafts[0], execute)
+    # This tests fidelity filtering/refitting, not which parent AQ05 ranks first.
+    # Constrain only this test's candidate support; retain real AQ05 prediction,
+    # reservation, execution, observation and refit. Production is unchanged.
+    select = selector.select
+    def execute_from(parent):
+        def select_parent(agent, options):
+            selected = [option for option in options if option.parent_node_id == parent.id]
+            assert selected, "Required test parent is not in the legal candidate set"
+            return select(agent, selected)
+        with monkeypatch.context() as patch:
+            patch.setattr(selector, "select", select_parent)
+            child = agent.step(parent, execute)
+        assert child.parent is parent
+        return child
+
+    cheap = execute_from(drafts[0])
     assert cheap.is_valid and cheap.training_fraction == .5, cheap.analysis
     before = copy.deepcopy(selector.gp.training_hash)
     assert len(selector.gp.rows) > 0
@@ -69,11 +84,17 @@ def test_aq05_half_full_refit_and_winner(aq05_cfg, mode):
         assert selector.gp.training_hash == before
     assert (aq05_cfg.workspace_dir / "input/validation.csv").read_bytes() == validation
     agent.update_data_preview()
-    full = agent.step(cheap, execute)
+    full = execute_from(cheap)
     assert full.is_valid and full.training_fraction == 1., full.analysis
     if mode == "reset":
         assert not selector.gp.rows  # A full child of a cheap parent is not a full/full gap.
-    next_full = agent.step(full, execute)
+    # Reproduce the Mila failure lineage: two full siblings of a cheap parent
+    # still provide zero admissible full/full residuals in reset mode.
+    sibling_full = execute_from(cheap)
+    assert sibling_full.is_valid and sibling_full.training_fraction == 1., sibling_full.analysis
+    if mode == "reset":
+        assert not selector.gp.rows
+    next_full = execute_from(full)
     assert next_full.is_valid and next_full.training_fraction == 1., next_full.analysis
     assert len(selector.gp.rows) >= 1
     if mode == "reset":

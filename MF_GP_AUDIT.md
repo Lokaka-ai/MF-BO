@@ -98,3 +98,24 @@ protocols directory with `--protocol-source` and preserve that directory.
 Preparation, actual data/protocol admission and short GPU/provider preflight
 must pass before the launcher admits a full search. Keep every failed, missing
 or interrupted task in the reported denominator.
+
+## Mila follow-up: reset integration test lineage (2026-10-25)
+
+Preparation job 11394186 on source a5986ac stopped with 142 passed and one
+failed reset integration test. Targeted job 11394457 reproduced the failure.
+The recorded full nodes 3b2710d2a51a40efac96fab7ce3b1dde and
+e2fb5d945f384d009dad1c920129dc30 both had cheap parent
+497a0a8a177042dfac02d4eb2f83dd45. There was no full/full transition, so zero
+reset GP rows was correct. The test incorrectly treated agent.step(parent)
+as forcing that parent, although AQ05 ranks other legal parents as well.
+
+The test now constrains its candidate support to the specified legal parent,
+while retaining real AQ05 prediction, reservation, execution, observation and
+refit. It explicitly checks that two full siblings of a cheap parent add no
+reset rows, then that a full child of a full parent adds exactly one. Existing
+carry-over, full-only winner and restored-state checks remain. All six tests
+in test_multifidelity_integration.py passed locally (68.34 s, 16 existing
+serialization warnings). Production code and campaign parameters are unchanged
+by this correction. This is a test of filtering/refitting under prescribed
+lineages, not evidence about unconstrained parent selection or performance.
+The corrected source must still pass preparation and GPU preflight on Mila.

@@ -93,3 +93,30 @@ Sources:
 - https://dev.opencode.ai/v2/docs/console/harnesses/codex/
 - https://developers.openai.com/codex/config-reference/
 - https://github.com/openai/codex/releases/tag/rust-v0.164.0
+
+## Kaggle transport correction — 2026-10-26
+
+Mila job 11401722 reached and passed the live Go provider check, then the legacy
+Kaggle download endpoint returned 404. The isolated official client downloaded
+Aerial Cactus successfully in job 11402230 after the user accepted its rules.
+The old endpoint still returned 404 afterward.
+
+Download transport now uses Kaggle 2.2.5 / kagglesdk 0.1.38 in `.venv-kaggle`,
+with a separate fully pinned dependency lock. MLE-Bench's Kaggle 1.6.17 and ML
+runtime lock remain unchanged. The official client handles transfer/resumption;
+the former custom parallel range downloader is removed. Temporary downloads
+stay under each task's `.kaggle-download` directory and are promoted to the
+canonical archive only after the original upstream ZIP checksum matches.
+All upstream preparation, public/private checksums, fixed protocols and search
+logic remain unchanged. Competition rules must be accepted by the credential's
+account for every task being downloaded. No automatic acceptance is performed.
+
+Old preparation failures remain evidence, not ready receipts. This updated
+package still needs preparation and GPU preflight on Mila. Local mocked
+transport tests cannot establish live download permission or data validity.
+
+Validation for this correction: 19 targeted local tests passed (6 download
+integrity/helper tests plus campaign and provider configuration checks). The
+34-package download lock installed and passed dependency compatibility checks.
+The engine, agents, LLM adapters, main runtime lock and fixed-protocol preparer
+have no diff from 6f3aad2. No live download was performed locally.

@@ -21,7 +21,6 @@ import sys
 import threading
 import time
 
-import requests
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]
@@ -62,61 +61,6 @@ def cluster_lock(path, timeout=10800):
         path.rmdir()
 
 
-def ranged_download(url, total, partial, connections=8, chunk_size=512 * 1024 * 1024):
-    """Resume bounded byte ranges, then assemble exactly the official archive."""
-    parts = partial.with_suffix(".parts")
-    parts.mkdir(exist_ok=True)
-    ranges = [(start, min(start + chunk_size, total) - 1) for start in range(0, total, chunk_size)]
-    # Reuse complete chunks from a previous sequential transfer.
-    if partial.exists() and partial.stat().st_size < total:
-        with partial.open("rb") as source:
-            for start, end in ranges:
-                if end >= partial.stat().st_size:
-                    break
-                part = parts / f"{start:012d}"
-                if not part.exists():
-                    with part.open("wb") as handle:
-                        source.seek(start)
-                        remaining = end - start + 1
-                        while remaining:
-                            data = source.read(min(8 * 1024 * 1024, remaining))
-                            handle.write(data)
-                            remaining -= len(data)
-
-    def fetch(bounds):
-        start, end = bounds
-        part = parts / f"{start:012d}"
-        expected = end - start + 1
-        for attempt in range(4):
-            size = part.stat().st_size if part.exists() else 0
-            if size == expected:
-                return part
-            if size > expected:
-                raise RuntimeError("Invalid cached download range length")
-            try:
-                with requests.get(url, headers={"Range": f"bytes={start + size}-{end}"}, stream=True, timeout=(30, 120)) as response:
-                    if response.status_code != 206 or response.headers.get("Content-Range") != f"bytes {start + size}-{end}/{total}":
-                        raise RuntimeError(f"Unexpected ranged download response: HTTP {response.status_code}")
-                    with part.open("ab") as handle:
-                        for chunk in response.iter_content(8 * 1024 * 1024):
-                            handle.write(chunk)
-                if part.stat().st_size == expected:
-                    return part
-            except requests.RequestException:
-                if attempt == 3:
-                    raise RuntimeError("Ranged download failed after four attempts") from None
-            time.sleep(2 * (attempt + 1))
-        raise RuntimeError("Incomplete download range")
-
-    with ThreadPoolExecutor(max_workers=connections) as pool:
-        completed = list(pool.map(fetch, ranges))
-    with partial.open("wb") as handle:
-        for part in completed:
-            with part.open("rb") as source:
-                shutil.copyfileobj(source, handle, 8 * 1024 * 1024)
-    return parts
-
-
 def download(task, data_dir, token_file):
     target = data_dir / task / f"{task}.zip"
     target.parent.mkdir(parents=True, exist_ok=True)
@@ -127,45 +71,31 @@ def download(task, data_dir, token_file):
             if digest(target) == expected:
                 return target
             raise RuntimeError(f"Existing archive checksum mismatch for {task}; preserved for inspection")
-        token = token_file.read_text().strip()
-        if not token.startswith("KGAT_") or any(c.isspace() for c in token):
-            raise ValueError("Expected a single Kaggle access token in the credential file")
-        partial = target.with_suffix(".zip.partial")
-        url = "https://www.kaggle.com/api/v1/competitions/data/download-all/" + task
-        with requests.get(url, headers={"Authorization": "Bearer " + token, "Range": "bytes=0-0"}, stream=True, timeout=(30, 120)) as probe:
-            total = int(probe.headers.get("Content-Range", "/0").rsplit("/", 1)[-1])
-            if probe.status_code == 206 and total >= 1024 ** 3:
-                parts = ranged_download(probe.url, total, partial, connections=16 if total >= 32 * 1024 ** 3 else 8)
-                actual = digest(partial)
-                if actual != expected:
-                    raise RuntimeError(f"Archive checksum mismatch for {task}: expected {expected}, got {actual}")
-                partial.replace(target)
-                shutil.rmtree(parts)
-                return target
-        for attempt in range(3):
-            offset = partial.stat().st_size if partial.exists() else 0
-            headers = {"Authorization": "Bearer " + token}
-            if offset:
-                headers["Range"] = f"bytes={offset}-"
-            try:
-                with requests.get(url, headers=headers, stream=True, timeout=(30, 120)) as response:
-                    if response.status_code not in (200, 206):
-                        hint = " (check competition rules and token permissions)" if response.status_code == 403 else ""
-                        raise RuntimeError(f"Kaggle download for {task}: HTTP {response.status_code}{hint}")
-                    mode = "ab" if offset and response.status_code == 206 else "wb"
-                    with partial.open(mode) as handle:
-                        for chunk in response.iter_content(8 * 1024 * 1024):
-                            handle.write(chunk)
-                actual = digest(partial)
-                if actual != expected:
-                    raise RuntimeError(f"Archive checksum mismatch for {task}: expected {expected}, got {actual}")
-                partial.replace(target)
-                return target
-            except requests.RequestException as error:
-                if attempt == 2:
-                    raise RuntimeError(f"Download failed for {task}: {type(error).__name__}") from None
-                time.sleep(5 * (attempt + 1))
-        raise RuntimeError(f"Download failed for {task}")
+        # Keep the modern transport isolated from upstream's pinned Kaggle 1.6.17.
+        python = ROOT / ".venv-kaggle/bin/python"
+        if not python.is_file():
+            raise RuntimeError("Missing download environment; run tasks/mlebench_lite/setup.sh")
+        staging = target.parent / ".kaggle-download"
+        staging.mkdir(exist_ok=True)
+        result = subprocess.run(
+            [str(python), str(ROOT / "tasks/mlebench_lite/kaggle_download.py"),
+             "--task", task, "--destination", str(staging), "--token-file", str(token_file)],
+            capture_output=True, text=True,
+        )
+        if result.returncode:
+            # The helper emits sanitized status only; never relay SDK URLs or credentials.
+            detail = result.stdout.strip()
+            if not detail.startswith("KAGGLE_DOWNLOAD_ERROR:"):
+                detail = "Download helper failed; check its environment installation"
+            raise RuntimeError(f"Kaggle download for {task}: {detail}")
+        archive = staging / target.name
+        if not archive.is_file():
+            raise RuntimeError(f"Kaggle did not produce the expected archive for {task}")
+        actual = digest(archive)
+        if actual != expected:
+            raise RuntimeError(f"Archive checksum mismatch for {task}: expected {expected}, got {actual}; preserved for inspection")
+        archive.replace(target)
+        return target
 
 
 def prepare_one(task, data_dir):

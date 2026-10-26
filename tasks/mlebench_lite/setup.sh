@@ -25,5 +25,10 @@ if [[ -d "$PROJECT_DIR/.cache/mlebench-lite/wheels" ]]; then
 fi
 uv pip sync --python .venv-mlebench/bin/python "$TASK_DIR/requirements.lock" "${sync_options[@]}"
 uv pip check --python .venv-mlebench/bin/python
+if [[ ! -x .venv-kaggle/bin/python ]]; then
+  uv venv --python 3.12 .venv-kaggle
+fi
+uv pip sync --python .venv-kaggle/bin/python "$TASK_DIR/requirements-download.lock"
+uv pip check --python .venv-kaggle/bin/python
 echo "Activate with: source $TASK_DIR/env.sh"
 echo "Prepare with: python tasks/mlebench_lite/prepare.py"

@@ -189,7 +189,7 @@ def prepare(args):
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
          "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
-         "tests/test_go_campaign.py", "tests/test_codex_retry.py",
+         "tests/test_go_campaign.py", "tests/test_codex_retry.py", "tests/test_kaggle_download.py",
          *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)

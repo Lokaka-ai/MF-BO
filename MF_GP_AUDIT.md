@@ -1,5 +1,10 @@
 # MF-GP implementation and launch audit — 2026-10-25
 
+## Current campaign update
+
+The 2026-10-26 approved provider revision is documented in `MILA_GO_ROUTE.md`.
+It supersedes native OpenCode routing described in the historical audit below.
+
 ## Outcome and boundary
 
 The local engineering checks below passed after correcting reproducible defects

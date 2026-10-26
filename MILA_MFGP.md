@@ -1,7 +1,10 @@
 # Launch the separate MF-GP campaign
 
-Use the new `mila-mfgp14-COMMIT.tar.gz` bundle. The existing
-`mila-mf14-a5986ac` package and its carry-over/reset campaign remain separate.
+Use the new `mila-mfgp14-COMMIT.tar.gz` bundle. The source bundle includes both launchers. Use separate campaign directories
+for carry-over/reset and MF-GP; preserve the earlier failed preparation logs.
+The current campaign uses Muse Spark 1.3 Contributor, Codex/OpenCode Go, high
+reasoning and Codex CLI 0.164.0. Earlier native OpenCode packages are superseded
+for this newly approved model route.
 The new campaign has 14 jobs: one `mf_gp` run per retained Lite task, each with
 12 hours active search, 500 total actions, 3 initial drafts/workers, seed 42,
 one A100 80GB and the same task-specific CPU/RAM allocations as the baseline.
@@ -26,10 +29,10 @@ python3 tasks/mlebench_lite/package_mfgp.py --output-dir /path/to/deliverables
 
    ```bash
    export PATH="$HOME/.local/bin:$HOME/.opencode/bin:$PATH"
-   command -v uv opencode ffmpeg git unzip 7z
+   command -v uv codex ffmpeg git unzip 7z
    ```
 
-3. For a matched comparison, wait until the old campaign has prepared all
+3. For a matched comparison, wait until the carry-over/reset launcher in this same bundle has prepared all
    14 frozen protocols, then submit preparation with those exact protocols:
 
    ```bash
@@ -38,7 +41,7 @@ python3 tasks/mlebench_lite/package_mfgp.py --output-dir /path/to/deliverables
      --key-file "$HOME/.config/bo-mf14/opencode-api-key" \
      --token-file "$HOME/.config/bo-mf14/kaggle-token" \
      --data-dir /network/scratch/d/duz/mlebench-data \
-     --protocol-source /network/scratch/d/duz/mila-mf14-a5986ac/runs/mf14_aq05/protocols
+     --protocol-source /network/scratch/d/duz/mila-mfgp14-COMMIT/runs/mf14_aq05/protocols
    ```
 
    This reuses the exact T/V membership and host scorer, and therefore the same

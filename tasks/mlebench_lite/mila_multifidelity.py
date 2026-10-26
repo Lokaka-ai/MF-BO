@@ -71,6 +71,11 @@ def environment(settings):
                OMP_NUM_THREADS="1", MKL_NUM_THREADS="1", OPENBLAS_NUM_THREADS="1",
                HF_HOME=str(ROOT / ".cache/mlebench-lite/huggingface"),
                TORCH_HOME=str(ROOT / ".cache/mlebench-lite/torch"))
+    if settings["spec"]["provider"] == "codex://opencode-go":
+        env.pop("OPENCODE_API_KEY", None)  # Use the explicit campaign credential file.
+        env["MLEVOLVE_CODEX_TIMEOUT_SECONDS"] = "1800"
+        env["MLEVOLVE_CODEX_BIN"] = str(ROOT / "tools/codex_opencode.py")
+        env["MLEVOLVE_CODEX_REASONING_EFFORT"] = settings["spec"]["reasoning_effort"]
     # The legacy lease supervisor explicitly forbids fixed evaluation.
     for key in ("MLEVOLVE_COMPETITION_CHECKPOINT", "MLEVOLVE_COMPETITION_PAUSE_FILE",
                 "MLEVOLVE_COMPETITION_LEASE_END", "MLEVOLVE_SEGMENTED_RUN"):
@@ -142,6 +147,25 @@ def submit_preparation(args):
                                                  "24:00:00", ["prepare"]))
 
 
+def verify_codex(settings, output):
+    binary = os.environ.get("MLEVOLVE_REAL_CODEX_BIN") or shutil.which("codex")
+    if not binary:
+        raise RuntimeError("Codex CLI is missing")
+    result = run([binary, "--version"], capture_output=True, text=True)
+    version = result.stdout.strip()
+    expected = "codex-cli " + settings["spec"]["codex_version"]
+    if version != expected:
+        raise RuntimeError(f"Codex version differs: expected {expected}, got {version}")
+    save(output, {"binary": str(Path(binary).resolve()), "version": version,
+                  "sha256": sha(Path(binary).resolve())})
+
+
+def provider_check_command(settings, output):
+    spec = settings["spec"]
+    return [PYTHON, "tools/check_go_provider.py", "--model", spec["model"],
+            "--provider", spec["provider"], "--output", output]
+
+
 def require_allocation():
     if not os.environ.get("SLURM_JOB_ID"):
         raise RuntimeError("This command must execute inside a Slurm allocation")
@@ -153,21 +177,23 @@ def prepare(args):
     if settings["source"] != source_hashes():
         raise RuntimeError("Campaign source changed")
     missing = [name for name in ("uv", "git", "unzip", "7z", "ffmpeg") if not shutil.which(name)]
-    opencode = os.environ.get("MLEVOLVE_OPENCODE_BIN") or shutil.which("opencode") or str(Path.home() / ".opencode/bin/opencode")
-    if not Path(opencode).is_file():
-        missing.append("opencode (or MLEVOLVE_OPENCODE_BIN)")
+    codex = os.environ.get("MLEVOLVE_REAL_CODEX_BIN") or shutil.which("codex")
+    if not codex or not Path(codex).is_file():
+        missing.append("codex (or MLEVOLVE_REAL_CODEX_BIN)")
     if missing:
         raise RuntimeError("Load/install prerequisites before preparation: " + ", ".join(missing))
+    verify_codex(settings, args.campaign / "codex-runtime.json")
     run(["git", "lfs", "version"])
     env = environment(settings)
     run(["bash", "tasks/mlebench_lite/setup.sh"], env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
          "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
+         "tests/test_go_campaign.py", "tests/test_codex_retry.py",
          *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
-    run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "provider-check.json"], env=env)
+    run(provider_check_command(settings, args.campaign / "provider-check.json"), env=env)
     spec = settings["spec"]
     run([PYTHON, "tasks/mlebench_lite/prepare.py", "--data-dir", settings["data_dir"],
          "--token-file", settings["token_file"], "--workers", "3", "--tasks", *spec["tasks"]], env=env)
@@ -180,7 +206,8 @@ def prepare(args):
         run([PYTHON, "tasks/mlebench_lite/prepare_fixed_protocol.py", "--task", task,
              "--data-root", settings["data_dir"], "--seed", str(spec["seed"]),
              "--output-root", args.campaign / "protocol_setup" / task,
-             "--protocol-dir", directory], env=env)
+             "--protocol-dir", directory, "--model", spec["model"],
+             "--provider", spec["provider"]], env=env)
         protocol = read(directory / "protocol.json")
         protocols[task] = {key: protocol[key] for key in ("protocol_id", "metric", "split")}
     save(args.campaign / "ready.json", {"settings_sha256": sha(args.campaign / "settings.json"),
@@ -248,7 +275,8 @@ def preflight(args):
         raise RuntimeError("CUDA training preflight produced nonfinite loss")
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--require-cuda", "--embedding",
          "--output", args.campaign / "gpu-environment.json"], env=env)
-    run([PYTHON, "tools/check_opencode.py", "--output", args.campaign / "gpu-provider-check.json"], env=env)
+    verify_codex(settings, args.campaign / "gpu-codex-runtime.json")
+    run(provider_check_command(settings, args.campaign / "gpu-provider-check.json"), env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
          "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
          *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
@@ -415,6 +443,7 @@ def worker(args):
     if (output / "run-info.json").exists() and not args.resume_run:
         raise RuntimeError("Existing run found; automatic restarting/re-budgeting is prohibited")
     try:
+        verify_codex(settings, output / "segments" / f"{os.environ['SLURM_JOB_ID']}-codex-runtime.json")
         import torch
         if torch.cuda.device_count() != 1:
             raise RuntimeError("Each run requires exactly one Slurm-visible GPU")

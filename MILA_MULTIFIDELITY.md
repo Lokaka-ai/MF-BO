@@ -9,8 +9,8 @@ Each search requests one A100 **80GB**, 12 hours cumulative active search,
 Slurm allocation is 13 hours to allow startup and final grading. A candidate's
 effective cap can be shorter when the search budget is nearly exhausted.
 
-Both modes use AQ05 GP4 knowledge gradient and the native OpenCode route
-`opencode/muse-spark-1.3-contributor-free`, high reasoning. Both start on the
+Both modes use AQ05 GP4 knowledge gradient and `muse-spark-1.3-contributor`
+through `codex://opencode-go`, high reasoning. Codex CLI 0.164.0 is pinned. Both start on the
 same uniformly random 50% of frozen training rows and use the same full fixed
 validation set. At 40% of the active budget, scheduling cheap work stops;
 existing work drains before the full-data switch. Carry-over keeps GP history;
@@ -24,8 +24,8 @@ If the cheap search exhausts legal work before the cutoff, it stops immediately
 with an explicit failure instead of holding an idle GPU until the switch.
 
 **This is not an exact reproduction of the historical upstream campaign.**
-The approved differences are fixed validation, redesigned evolution, the native
-OpenCode provider/model alias (backend equivalence is unverified), and selection
+The approved differences are fixed validation, redesigned evolution, the
+unverified historical Codex CLI version (ours is 0.164.0), and selection
 of the best full-data fixed-validation node instead of legacy final fusion.
 We request continuous allocations; historical runs included interruptions and
 repairs. Seven tasks' resources come from completed owner run records; the other
@@ -59,13 +59,13 @@ reused through `--data-dir` below.
 ## 2. Supply your account-specific prerequisites
 
 Load/install these commands using your Mila environment: `python3`, `uv`, `git`
-with Git LFS, `unzip`, `7z`, `ffmpeg`, and `opencode`. The preparation job checks
-them before installing the locked Python environment. If OpenCode is outside
-PATH, export `MLEVOLVE_OPENCODE_BIN=/absolute/path/to/opencode`.
+with Git LFS, `unzip`, `7z`, `ffmpeg`, and Codex CLI 0.164.0. The preparation job
+checks them before installing the locked Python environment. If Codex is outside
+PATH, export `MLEVOLVE_REAL_CODEX_BIN=/absolute/path/to/codex`.
 
 Create two private text files outside this checkout:
 
-- OpenCode API key: a file containing only your key.
+- OpenCode Go API key: a file containing only your key, from a workspace with an active Go subscription.
 - Kaggle access token: a file containing your `KGAT_...` token.
 
 Restrict their permissions (`chmod 600 /path/to/KEY_FILE /path/to/TOKEN_FILE`).

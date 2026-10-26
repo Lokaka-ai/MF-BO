@@ -26,6 +26,10 @@ def prepare(args):
     if not desc.is_file():
         raise FileNotFoundError(f"Prepared task is absent: {desc}")
     cfg = _load_cfg(use_cli_args=False)
+    if getattr(args, "model", None):
+        for stage in (cfg.agent.code, cfg.agent.feedback):
+            stage.model = args.model
+            stage.base_url = args.provider
     cfg.exp_id = args.task
     cfg.exp_name = args.task + "_fixed_protocol_setup"
     cfg.dataset_dir = str(args.data_root.resolve())
@@ -52,7 +56,11 @@ def main(argv=None):
     parser.add_argument("--output-root", required=True, type=Path)
     parser.add_argument("--protocol-dir", type=Path)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--model")
+    parser.add_argument("--provider")
     args = parser.parse_args(argv)
+    if bool(args.model) != bool(args.provider):
+        parser.error("Provide --model and --provider together")
     print(json.dumps(prepare(args), indent=2), flush=True)
     return 0
 

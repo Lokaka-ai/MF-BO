@@ -133,8 +133,15 @@ def submit_preparation(args):
     for path in (args.key_file, args.token_file):
         if not path.is_file():
             raise ValueError(f"Credential file does not exist: {path}")
+    spec = read(SPEC)
+    selected = getattr(args, "tasks", None)
+    if selected is not None:
+        if not selected or len(set(selected)) != len(selected) or set(selected) - set(spec["tasks"]):
+            raise ValueError("Provide unique tasks from the supported manifest")
+        # Freeze the selected scope in settings; all later stages use this map.
+        spec["tasks"] = {task: resources for task, resources in spec["tasks"].items() if task in selected}
     settings = {"key_file": str(args.key_file.resolve()), "token_file": str(args.token_file.resolve()),
-                "data_dir": str(args.data_dir.resolve()), "spec": read(SPEC), "source": source_hashes()}
+                "data_dir": str(args.data_dir.resolve()), "spec": spec, "source": source_hashes()}
     if getattr(args, "protocol_source", None) is not None:
         from tasks.mlebench_lite.mfgp_protocols import register_source
         settings["protocol_source"] = register_source(args.protocol_source, settings["spec"]["tasks"])
@@ -233,7 +240,7 @@ def submit(args):
     spec = settings["spec"]
     tasks = args.tasks or list(spec["tasks"])
     if set(tasks) - set(spec["tasks"]):
-        raise ValueError("Task is not in the approved 14-task manifest")
+        raise ValueError("Task is not in this prepared campaign")
     with submission_lock(args.campaign):
         for task in tasks:
             resources = spec["tasks"][task]
@@ -523,7 +530,8 @@ def worker(args):
 
 def collect(args):
     args.campaign.mkdir(parents=True, exist_ok=True)
-    spec = read(SPEC)
+    settings_path = args.campaign / "settings.json"
+    spec = read(settings_path)["spec"] if settings_path.exists() else read(SPEC)
     rows = []
     jobs = read(args.campaign / "jobs.json") if (args.campaign / "jobs.json").exists() else {}
     for task in spec["tasks"]:
@@ -552,7 +560,7 @@ def main(*, modes=("carry_over", "reset"), default_campaign=None):
     parser.add_argument("--key-file", type=Path)
     parser.add_argument("--token-file", type=Path)
     parser.add_argument("--data-dir", type=Path, default=ROOT / "data/mlebench")
-    parser.add_argument("--tasks", nargs="+")
+    parser.add_argument("--tasks", nargs="+", help="Freeze preparation scope, or select already prepared tasks for submission")
     parser.add_argument("--task")
     parser.add_argument("--mode", choices=modes)
     parser.add_argument("--resume-run", action="store_true", help=argparse.SUPPRESS)

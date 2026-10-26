@@ -97,3 +97,67 @@ class CampaignTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+# Freeze pilot scope before downloads, protocol registration or Slurm submission.
+import pytest
+
+
+@pytest.mark.parametrize("manifest, modes", [
+    ("mlebench_mf14.json", ["carry_over", "reset"]),
+    ("mlebench_mfgp14.json", ["mf_gp"]),
+])
+def test_one_task_preparation_scope_and_submission(tmp_path, monkeypatch, manifest, modes):
+    task = "aerial-cactus-identification"
+    spec_path = ROOT / "config" / manifest
+    original = campaign.read(spec_path)
+    monkeypatch.setattr(campaign, "SPEC", spec_path)
+    monkeypatch.setattr(campaign, "source_hashes", lambda: {"source": "hash"})
+    key, token = tmp_path / "key", tmp_path / "token"
+    key.touch()
+    token.touch()
+    source = tmp_path / "baseline/protocols"
+    campaign.save(source / task / "protocol.json", {"task_id": task, "protocol_id": "frozen"})
+    directory = tmp_path / "campaign"
+    args = SimpleNamespace(campaign=directory, partition="main-cpu", key_file=key,
+        token_file=token, data_dir=tmp_path / "data", tasks=[task],
+        protocol_source=source if modes == ["mf_gp"] else None)
+    with patch.object(campaign, "run", return_value=SimpleNamespace(stdout="12345\n")):
+        campaign.submit_preparation(args)
+    settings = campaign.read(directory / "settings.json")
+    assert settings["spec"]["tasks"] == {task: original["tasks"][task]}
+    assert {k: v for k, v in settings["spec"].items() if k != "tasks"} == {k: v for k, v in original.items() if k != "tasks"}
+    if args.protocol_source:
+        assert settings["protocol_source"]["protocol_ids"] == {task: "frozen"}
+    monkeypatch.setattr(campaign, "ready", lambda _: settings)
+    campaign.save(directory / "gpu-ready.json", {"settings_sha256": campaign.sha(directory / "settings.json")})
+    with patch.object(campaign, "run", return_value=SimpleNamespace(stdout="12346\n")) as run:
+        campaign.submit(SimpleNamespace(campaign=directory, partition="long", tasks=None))
+        assert run.call_count == len(modes)
+        for call in run.call_args_list:
+            assert f"--task {task}" in call.args[0][-1]
+        with pytest.raises(ValueError, match="prepared campaign"):
+            campaign.submit(SimpleNamespace(campaign=directory, partition="long", tasks=["leaf-classification"]))
+    campaign.collect(SimpleNamespace(campaign=directory))
+    import csv
+    with (directory / "summary.csv").open() as handle:
+        rows = list(csv.DictReader(handle))
+    assert len(rows) == len(modes)
+    assert {row["task"] for row in rows} == {task}
+    # A later expansion cannot silently alter the prepared pilot scope.
+    args.tasks = [task, "leaf-classification"]
+    args.protocol_source = None
+    with pytest.raises(ValueError, match="settings already differ"):
+        campaign.submit_preparation(args)
+
+
+@pytest.mark.parametrize("tasks", [["unknown"], ["aerial-cactus-identification"] * 2, []])
+def test_invalid_preparation_scope_never_submits(tmp_path, monkeypatch, tasks):
+    credential = tmp_path / "key"
+    credential.touch()
+    args = SimpleNamespace(campaign=tmp_path / "campaign", key_file=credential,
+        token_file=credential, tasks=tasks)
+    with patch.object(campaign, "sbatch") as submit:
+        with pytest.raises(ValueError, match="unique tasks"):
+            campaign.submit_preparation(args)
+        submit.assert_not_called()

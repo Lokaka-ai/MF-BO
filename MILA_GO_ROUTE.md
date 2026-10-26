@@ -41,9 +41,12 @@ code was changed in this routing revision.
 6. nomad2018-predict-transparent-conductors
 7. tabular-playground-series-may-2022
 
-The manifests retain 14 supported tasks and preparation currently prepares all
-14. Submit search with an explicit `--tasks` list; do not use unfiltered submit
-for this seven-task study. Keep at most three search jobs running by submitting
+The manifests retain 14 supported tasks. For the approved pilot, pass
+`--tasks aerial-cactus-identification` to `submit-prepare` for BOTH launchers.
+This freezes a one-task campaign in settings before downloads or protocol
+registration. Preparation, default submission and collection then use only
+that task. Later tasks require a separately scoped campaign; an existing
+campaign cannot silently change its task set. Keep at most three search jobs running by submitting
 one task's three modes at a time. Inspect the first task for engineering
 correctness/utilization, not to change the task set based on who wins.
 
@@ -120,3 +123,18 @@ integrity/helper tests plus campaign and provider configuration checks). The
 34-package download lock installed and passed dependency compatibility checks.
 The engine, agents, LLM adapters, main runtime lock and fixed-protocol preparer
 have no diff from 6f3aad2. No live download was performed locally.
+
+## One-task pilot preparation
+
+For the baseline launcher, use `submit-prepare --partition main-cpu --tasks
+ aerial-cactus-identification` with the existing key-file, token-file and
+ data-dir arguments. Once it succeeds, prepare the MF-GP campaign with the
+ same task argument and `--protocol-source` pointing to the baseline campaign's
+ protocols directory. The original manifests and task-specific resources remain
+ unchanged. No unselected task is downloaded or required for protocol reuse.
+
+Five new scope checks cover both launchers, selected protocol registration,
+unchanged resources/settings, exactly two baseline jobs plus one MF-GP job,
+rejection of unprepared tasks and campaign expansion, scoped result collection,
+and invalid selections before any submission. They are offline checks, not
+Mila readiness evidence.

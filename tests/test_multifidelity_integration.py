@@ -133,7 +133,8 @@ def test_all_campaign_commands_load_actual_aq05_config(tmp_path, monkeypatch):
 
 
 @pytest.mark.parametrize("mode", ["carry_over", "reset"])
-def test_runner_drains_then_continues_full_search(aq05_cfg, mode, monkeypatch):
+@pytest.mark.parametrize("trigger", ["time", "steps"])
+def test_runner_drains_then_continues_full_search(aq05_cfg, mode, trigger, monkeypatch):
     import run as runner
     from engine.fixed_evaluation import FixedEvaluation
     import threading
@@ -165,13 +166,17 @@ def test_runner_drains_then_continues_full_search(aq05_cfg, mode, monkeypatch):
                 active.discard(node.id)
                 if node.training_fraction == .5:
                     counts["cheap"] += 1
-                    if counts["cheap"] == 4:
+                    if trigger == "time" and counts["cheap"] == 1:
                         # Move only the budget clock across the 40% threshold.
                         captured[0].start_time -= .41 * aq05_cfg.agent.time_limit
     def switch_record(self):
         assert not active, "A cheap evaluation was still running at the switch"
         assert not captured[0].phase1_runtime.root_draft_state["pending"]
         counts["switches"] += 1
+        if trigger == "steps":
+            agent = captured[0]
+            assert runner.time.time() - agent.start_time < .40 * aq05_cfg.agent.time_limit
+            assert agent.phase1_runtime.root_draft_state["submitted_count"] >= 5
         return switch(self)
     monkeypatch.setattr(FixedEvaluation, "begin_attempt", begin_record)
     monkeypatch.setattr(FixedEvaluation, "score", score_record)
@@ -185,6 +190,7 @@ def test_runner_drains_then_continues_full_search(aq05_cfg, mode, monkeypatch):
     runner.run()
     agent = captured[0]
     assert counts["switches"] == 1 and workers == [3]
+    assert agent.phase1_runtime.root_draft_state["submitted_count"] <= aq05_cfg.agent.steps
     valid = [node for node in agent.journal.nodes if node.is_valid]
     assert {node.training_fraction for node in valid} == {.5, 1.}
     full = [node for node in valid if node.training_fraction == 1.]

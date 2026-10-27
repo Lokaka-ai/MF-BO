@@ -12,6 +12,7 @@
   "modes": ["carry_over", "reset"],
   "training_fraction": 0.5,
   "switch_fraction": 0.4,
+  "switch_step_fraction": 0.4,
   "model": "muse-spark-1.3-contributor",
   "provider": "codex://opencode-go",
   "codex_version": "0.164.0",

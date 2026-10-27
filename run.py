@@ -82,8 +82,22 @@ def run():
     multifidelity = agent.fixed_evaluation if (agent.fixed_evaluation and agent.fixed_evaluation.multifidelity_mode) else None
 
     def switch_due():
-        return (multifidelity is not None and multifidelity.multifidelity_phase == "half"
-                and time.time() - agent.start_time >= .40 * float(cfg.agent.time_limit))
+        if multifidelity is None or multifidelity.multifidelity_phase != "half":
+            return False
+        from engine.multifidelity import switch_due as budget_switch_due
+        with agent.journal_lock, agent.phase1_runtime._selection_lock:
+            runtime = agent.phase1_runtime
+            state = runtime.root_draft_state
+            if runtime.legacy_checkpoint:
+                budgeted_steps = len(agent.journal) - 1
+            else:
+                # Match the native step-budget accounting, including reservations.
+                # Recovered decisions already charged must not be counted twice.
+                reserved = sum(p["status"] == "reserved" and not p.get("recovery_already_submitted")
+                               for p in state["pending"].values())
+                budgeted_steps = state["submitted_count"] + reserved
+            return budget_switch_due(time.time() - agent.start_time,
+                                     cfg.agent.time_limit, budgeted_steps, cfg.agent.steps)
 
     def switch_if_drained(futures):
         if not switch_due() or futures:
@@ -192,7 +206,7 @@ def run():
         for draft_idx in range(min(initial_draft_count, total_steps)):
             try:
                 if switch_due():
-                    logger.info("Cheap-stage deadline reached during draft generation; draining generated drafts")
+                    logger.info("Cheap-stage budget threshold reached during draft generation; draining generated drafts")
                     break
                 logger.info(f"🔨 Generating draft {draft_idx + 1}/{min(initial_draft_count, total_steps)} (code only)")
                 cur_node = step_task_generate_only()

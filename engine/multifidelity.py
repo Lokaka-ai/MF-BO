@@ -3,6 +3,7 @@
 import csv
 import hashlib
 import json
+import math
 from pathlib import Path
 import random
 import sys
@@ -10,6 +11,12 @@ import sys
 
 MODES = ("carry_over", "reset")
 SWITCH_FRACTION = 0.40
+
+
+def switch_due(elapsed_seconds, time_limit, budgeted_steps, step_limit):
+    """Drain cheap work once either 40% budget threshold is reached."""
+    return (elapsed_seconds >= SWITCH_FRACTION * float(time_limit)
+            or budgeted_steps >= max(1, math.ceil(SWITCH_FRACTION * int(step_limit))))
 
 
 def file_hash(path):

@@ -502,6 +502,8 @@ class FixedEvaluation:
             journal.evaluation_state.update(multifidelity_mode=mode,
                 multifidelity_phase=instance.multifidelity_phase, multifidelity_subset=manifest,
                 multifidelity_switch_fraction=0.40)
+            if mode in MODES:
+                journal.evaluation_state["multifidelity_switch_step_fraction"] = 0.40
             instance.half_view = view
         instance.budget_charge = elapsed if state else max(elapsed, spec["setup_cost_seconds"])
         instance._install_public_view()

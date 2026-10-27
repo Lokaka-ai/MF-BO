@@ -166,3 +166,29 @@ run also exposed an outdated routing-only test fixture that bypassed typed
 configuration; after updating that fixture, all 21 focused Go/campaign tests
 passed, including the new real-configuration/subprocess regression. No live
 Mila setup or GPU execution is claimed for this source revision.
+
+## Approved dual-budget stage switch — 2026-10-27
+
+Carry-over/reset now stop dispatching cheap work when either 40% of the active
+search-time budget or 40% of the budgeted step count is reached, whichever
+comes first. For this campaign: 17,280 active seconds or 200 budgeted steps.
+Count submitted actions plus outstanding uncharged reservations, using the
+native step-cap accounting; recovered already-charged reservations do not count
+twice. Already dispatched work drains before the training view switches.
+The effective switch can occur after the trigger while pending work drains.
+
+The overall 43,200-second/500-step caps, three workers, full-only winner,
+carry-over/reset surrogate behavior, fixed protocol and MF-GP logic are
+unchanged. No automatic promotion or extra evaluation outside those caps is
+added. This closes the fast-cheap-search path that could exhaust all 500 steps
+before the old time-only switch. It does not guarantee a successful full-data
+candidate when training fails or consumes the remaining time.
+
+Use a new frozen campaign/package for this change; do not modify the earlier
+package's source or readiness receipts. Existing dataset files can be reused.
+
+Validation: 25 targeted tests passed, including real CPU runner integration
+for carry-over and reset under both time-first and step-first triggers. The
+step-first cases keep elapsed time below the time threshold, verify drained
+work, retain the overall step cap, and produce full-fidelity winners. MF-GP
+model/controller/runner sources and its campaign manifest are unchanged.

@@ -51,3 +51,12 @@ def test_full_node_ids_ignore_cheap_and_missing_snapshots():
                    "id": "full", "training_fraction": 1.0}}}),
                SimpleNamespace(child_node_id="missing", metadata={})]
     assert full_node_ids(records) == {"full"}
+
+
+def test_switch_uses_first_time_or_step_threshold():
+    from engine.multifidelity import switch_due
+    assert not switch_due(17279, 43200, 199, 500)
+    assert switch_due(17280, 43200, 0, 500)
+    assert switch_due(1, 43200, 200, 500)
+    assert not switch_due(1, 100, 4, 12)
+    assert switch_due(1, 100, 5, 12)

@@ -138,3 +138,31 @@ unchanged resources/settings, exactly two baseline jobs plus one MF-GP job,
 rejection of unprepared tasks and campaign expansion, scoped result collection,
 and invalid selections before any submission. They are offline checks, not
 Mila readiness evidence.
+
+## Standalone setup workspace correction — 2026-10-26
+
+Pilot job 11402636 passed 165 tests, environment checks, both live Go checks and
+Aerial Cactus upstream data preparation, then timed out in fixed-protocol setup.
+The recorded 6,696 failed attempts ended with Codex reporting a missing path;
+the user confirmed the configured per-run workspace did not exist. `prep_cfg`
+assigns that path but does not create it. Standalone preparation now calls
+`prep_agent_workspace` after enabling fixed evaluation: only empty input,
+working and submission directories are created; no raw data is copied there.
+
+Setup model-call exceptions now preserve their attempt traceback and terminate
+setup instead of being fed into DEBUG as if an evaluator program had failed.
+Returned adapter code still follows the existing parse/execute/admit/DEBUG
+workflow and hard preparation deadline. No BO search, metric, split, model,
+fidelity, budget or winner rule is changed. Earlier failed logs must be retained.
+
+The standalone regression uses real configuration preparation and a subprocess
+CLI fixture that rejects a missing --cd directory. Additional tests check that
+both initial and DEBUG-call failures stop promptly with no admitted protocol.
+These local checks do not replace the live protocol-generation gate on Mila.
+
+Validation: all 55 fixed-evaluation tests passed, including real local HTTP
+setup, adapter execution/repair, scoring and runner checks. The first combined
+run also exposed an outdated routing-only test fixture that bypassed typed
+configuration; after updating that fixture, all 21 focused Go/campaign tests
+passed, including the new real-configuration/subprocess regression. No live
+Mila setup or GPU execution is claimed for this source revision.

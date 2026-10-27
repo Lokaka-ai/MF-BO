@@ -82,6 +82,7 @@ def test_protocol_preparation_uses_campaign_model(tmp_path, monkeypatch):
     cfg = OmegaConf.create({"agent":{"code":{"model":"old","base_url":"old"},"feedback":{"model":"old","base_url":"old"},"seed":0},"evaluation":{"enabled":False}})
     monkeypatch.setattr(prep, "_load_cfg", lambda **kw: cfg)
     monkeypatch.setattr(prep, "prep_cfg", lambda c: c)
+    monkeypatch.setattr(prep, "prep_agent_workspace", lambda c: None)  # Routing-only fixture; real setup tested below.
     monkeypatch.setattr(prep, "load_task_desc", lambda c: "fixture")
     def check(c, *a):
         assert c.agent.code.model == c.agent.feedback.model == "muse-spark-1.3-contributor"
@@ -90,3 +91,60 @@ def test_protocol_preparation_uses_campaign_model(tmp_path, monkeypatch):
     monkeypatch.setattr(prep.FixedEvaluation,"prepare_or_load",check)
     prep.prepare(NS(task=task,data_root=tmp_path,output_root=tmp_path,protocol_dir=None,seed=42,
         model="muse-spark-1.3-contributor",provider="codex://opencode-go"))
+
+
+
+def test_standalone_setup_creates_real_codex_working_directory(tmp_path, monkeypatch):
+    from tasks.mlebench_lite import prepare_fixed_protocol as prep
+    task = "aerial-cactus-identification"
+    public = tmp_path / "data" / task / "prepared/public"
+    public.mkdir(parents=True)
+    (public / "description.md").write_text("Binary image classification fixture")
+    cli = tmp_path / "fake_codex.py"
+    cli.write_text("""import sys
+from pathlib import Path
+args = sys.argv
+working = Path(args[args.index('--cd') + 1])
+assert working.is_dir(), 'Codex --cd directory is missing'
+assert not list((working.parent / 'input').iterdir()), 'Raw data copied into setup workspace'
+Path(args[args.index('--output-last-message') + 1]).write_text('fixture response')
+""")
+    monkeypatch.setenv("MLEVOLVE_CODEX_BIN", str(cli))
+    def check(cfg, *unused):
+        assert Path(cfg.workspace_dir).name == "workspace"
+        text, _ = codex._run_codex(prompt="fixture", cfg=cfg, model=cfg.agent.code.model,
+            stage=cfg.agent.code, timeout_seconds=10)
+        assert text == "fixture response"
+        return NS(directory=tmp_path, protocol_id="fixture", spec={"metric": {}, "split": {}})
+    monkeypatch.setattr(prep.FixedEvaluation, "prepare_or_load", check)
+    prep.prepare(NS(task=task, data_root=tmp_path / "data", output_root=tmp_path / "fresh-run",
+        protocol_dir=None, seed=42, model="muse-spark-1.3-contributor", provider="codex://opencode-go"))
+
+
+@pytest.mark.parametrize("repair", [False, True])
+def test_setup_model_failure_stops_without_retry_storm(tmp_path, monkeypatch, repair):
+    from agents import evaluation_setup_agent as setup
+    from engine.fixed_evaluation import EvaluationError
+    data = tmp_path / "data"
+    data.mkdir()
+    cfg = {"data_dir": str(data), "log_dir": str(tmp_path / "logs"), "exp_id": "fixture",
+           "agent": {"seed": 42, "code": {"model": "fixture", "temp": 0}},
+           "evaluation": {"setup_max_attempts": 0}}
+    calls = []
+    def fail(*a, **kw):
+        calls.append("failed")
+        raise RuntimeError("codex exec failed: No such file or directory")
+    if repair:
+        monkeypatch.setattr(setup, "query", lambda **kw: {"supported": True, "reasoning": "fixture", "code": "syntax invalid !"})
+    else:
+        monkeypatch.setattr(setup, "query", fail)
+    monkeypatch.setattr(setup.debug_agent, "repair_evaluation_setup", fail)
+    request = {"cfg": cfg, "directory": str(tmp_path / "protocol"), "resuming": False,
+               "task_desc": "fixture", "expected_protocol_id": None}
+    with pytest.raises(EvaluationError, match="model call failed"):
+        setup.worker(request)
+    assert calls == ["failed"]
+    errors = list((tmp_path / "logs/evaluation_setup").glob("attempt_*/error.txt"))
+    assert len(errors) == (2 if repair else 1)
+    assert any("No such file or directory" in p.read_text() for p in errors)
+    assert not (tmp_path / "protocol/protocol.json").exists()

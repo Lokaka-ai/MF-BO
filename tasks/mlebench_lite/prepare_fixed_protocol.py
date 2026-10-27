@@ -10,7 +10,7 @@ import sys
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT))
 
-from config import _load_cfg, load_task_desc, prep_cfg
+from config import _load_cfg, load_task_desc, prep_cfg, prep_agent_workspace
 from engine.fixed_evaluation import FixedEvaluation
 from engine.search_node import Journal
 from tasks.mlebench_lite.run_bo import TASKS
@@ -42,6 +42,9 @@ def prepare(args):
     if args.protocol_dir:
         cfg.evaluation.protocol_dir = str(args.protocol_dir.resolve())
     cfg = prep_cfg(cfg)
+    # Codex requires an existing --cd directory even for prompt-only generation.
+    # Fixed evaluation creates empty workspace directories, not a raw-data copy.
+    prep_agent_workspace(cfg)
     evaluator = FixedEvaluation.prepare_or_load(cfg, load_task_desc(cfg), Journal())
     return {"task": args.task, "seed": args.seed,
             "protocol_dir": str(evaluator.directory),

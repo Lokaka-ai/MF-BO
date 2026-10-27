@@ -172,6 +172,7 @@ def worker(request):
             prepared.mkdir(parents=True)
             prompt = build_prompt(request["task_desc"], data_inventory, cfg.exp_id, previous)
             code = previous["code"] if previous else ""
+            response_received = False
             try:
                 if previous:
                     response = debug_agent.repair_evaluation_setup(cfg, prompt, SETUP_SPEC, attempt_dir / "prompt.md")
@@ -179,6 +180,7 @@ def worker(request):
                     (attempt_dir / "prompt.md").write_text(compile_prompt_to_md(prompt))
                     response = query(system_message=prompt, user_message=None, func_spec=SETUP_SPEC,
                                      model=cfg.agent.code.model, temperature=cfg.agent.code.temp, cfg=cfg)
+                response_received = True
                 _write_json(attempt_dir / "response.json", response)
                 if isinstance(response, dict) and isinstance(response.get("code"), str):
                     code = response["code"]  # Preserve even syntax-invalid code for DEBUG.
@@ -204,6 +206,10 @@ def worker(request):
             except Exception as exc:
                 error = traceback.format_exc()
                 (attempt_dir / "error.txt").write_text(error)
+                if not response_received:
+                    raise EvaluationError(
+                        f"Setup model call failed before returning an adapter; see {attempt_dir / 'error.txt'}"
+                    ) from exc
                 output_path = attempt_dir / "prepare.log"
                 previous = {"code": code, "error": error[-6000:],
                             "program_output": output_path.read_text()[-6000:] if output_path.exists() else ""}

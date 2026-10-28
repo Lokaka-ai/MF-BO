@@ -2,6 +2,7 @@ import copy
 import json
 from pathlib import Path
 from typing import Type, TypeVar
+from dataclasses import fields
 
 import dataclasses_json
 
@@ -15,14 +16,34 @@ def dumps_json(obj: dataclasses_json.DataClassJsonMixin):
     """Serialize dataclasses (such as Journals) to JSON."""
     Journal = _get_journal_cls()
     if isinstance(obj, Journal):
-        obj = copy.deepcopy(obj)
+        # Completed nodes can carry a live decision context that refers back
+        # to the whole search graph. Deep-copying that graph before severing
+        # links grows with the search and can exceed Python's recursion limit.
+        # Only dataclass fields are part of the journal's persisted contract.
         node2parent = {n.id: n.parent.id for n in obj.nodes if n.parent is not None}
-        node2best_local_node = {n.id: n.local_best_node.id for n in obj.nodes if n.local_best_node is not None and n.local_best_node.metric.value is not None}
-        for n in obj.nodes:
-            n.parent = None
-            n.local_best_node = None
-            n.child_count_lock = None
-            n.children = set()
+        node2best_local_node = {
+            n.id: n.local_best_node.id for n in obj.nodes
+            if n.local_best_node is not None and n.local_best_node.metric is not None
+            and n.local_best_node.metric.value is not None
+        }
+        detached = copy.copy(obj)
+        detached.nodes = []
+        for node in obj.nodes:
+            clone = type(node).__new__(type(node))
+            for member in fields(node):
+                value = getattr(node, member.name)
+                if member.name in ("parent", "local_best_node", "child_count_lock"):
+                    value = None
+                elif member.name == "children":
+                    value = set()
+                else:
+                    value = copy.deepcopy(value)
+                setattr(clone, member.name, value)
+            detached.nodes.append(clone)
+        for member in fields(obj):
+            if member.name != "nodes":
+                setattr(detached, member.name, copy.deepcopy(getattr(obj, member.name)))
+        obj = detached
 
     obj_dict = obj.to_dict()
 

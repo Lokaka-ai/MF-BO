@@ -13,6 +13,48 @@ MODES = ("carry_over", "reset")
 SWITCH_FRACTION = 0.40
 
 
+def cheap_execution_seconds_left(mode, phase, node, start_time, time_limit, now):
+    """Bound cheap work that must finish before full-data work can begin.
+
+    The staged modes drain their half-data workers at the 40% clock point.
+    MF-GP is adaptive, so only its mandatory initial cheap drafts use this
+    deadline; later controller-selected cheap actions retain their own guard.
+    """
+    if getattr(node, "training_fraction", None) != 0.5:
+        return None
+    if mode in MODES and phase == "half":
+        pass
+    elif mode == "mf_gp" and (getattr(node, "phase1_selection_features", None) or {}).get("mf", {}).get("initial"):
+        pass
+    else:
+        return None
+    return max(0.0, SWITCH_FRACTION * float(time_limit) - (float(now) - float(start_time)))
+
+
+def completed_full_winner(journal):
+    """Use the same full-fidelity eligibility as each mode's finalizer."""
+    state = journal.evaluation_state or {}
+    mode = state.get("multifidelity_mode")
+    if mode == "mf_gp":
+        selector = (journal.parent_selector_state or {}).get("study7_state") or {}
+        rows = [o for o in selector.get("observations", [])
+                if o.get("valid") and o.get("fidelity") == 1.0
+                and o.get("budget_eligible", True)]
+        if not rows:
+            return None
+        best = max(rows, key=lambda o: o["utility"])
+        return next((n for n in journal.nodes if n.id == best["program_id"]), None)
+    if mode in MODES:
+        eligible = [n for n in journal.nodes
+                    if n.stage != "root" and n.is_valid is True
+                    and n.is_buggy is False and n.training_fraction == 1.0
+                    and n.evaluation_protocol_id == state.get("protocol_id")
+                    and n.evaluation_result and n.evaluation_result.get("valid")
+                    and n.metric and n.metric.value == n.evaluation_result.get("metric")]
+        return max(eligible, key=lambda n: n.metric, default=None)
+    return None
+
+
 def switch_due(elapsed_seconds, time_limit, budgeted_steps, step_limit):
     """Drain cheap work once either 40% budget threshold is reached."""
     return (elapsed_seconds >= SWITCH_FRACTION * float(time_limit)

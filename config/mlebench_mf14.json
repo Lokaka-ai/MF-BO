@@ -22,14 +22,16 @@
     "Redesigned evolution retained.",
     "Codex CLI 0.164.0 pinned for all arms; historical CLI version unverified. Current documented Go Responses endpoint used.",
     "Winner is the best valid full-training fixed-validation node; historical run used legacy final fusion.",
-    "One continuous allocation is requested; historical owner runs included interruptions and runtime repairs."
+    "One continuous allocation is requested; historical owner runs included interruptions and runtime repairs.",
+    "Half-data executions stop at the 40% active-time switch boundary; full-data executions retain the nine-hour candidate cap.",
+    "Aerial Cactus pilot requests 64 GB host RAM after both 24 GB pilot workers hit the cgroup limit; historical allocation was 24 GB."
   ],
   "resource_sources": {
     "owner": "docs/MLEBENCH_LITE_AQ05_OWNER_RUN_20260921_zh.md: recorded per-task allocations",
     "collaborator": "docs/MLEBENCH_LITE_AQ05_COLLABORATOR_RUNBOOK_20260920_zh.md: documented requested allocations, not verified completed runs"
   },
   "tasks": {
-    "aerial-cactus-identification": {"cpus": 4, "memory_gb": 24, "source": "owner"},
+    "aerial-cactus-identification": {"cpus": 4, "memory_gb": 64, "source": "pilot_safety_after_24g_oom"},
     "aptos2019-blindness-detection": {"cpus": 6, "memory_gb": 32, "source": "owner"},
     "dog-breed-identification": {"cpus": 21, "memory_gb": 128, "source": "collaborator"},
     "jigsaw-toxic-comment-classification-challenge": {"cpus": 4, "memory_gb": 64, "source": "owner"},

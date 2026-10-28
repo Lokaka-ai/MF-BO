@@ -5,7 +5,8 @@
 14 Lite tasks, excluding the eight agreed tasks; two modes; seed 42. The exact
 task list and CPU/RAM allocations are in `config/mlebench_mf14.json`.
 Each search requests one A100 **80GB**, 12 hours cumulative active search,
-500 steps, three drafts, three workers, and a nine-hour candidate execution cap.
+500 steps, three drafts, three workers, and a nine-hour full-data candidate
+execution cap. Half-data executions stop at the 40% active-time boundary.
 Slurm allocation is 13 hours to allow startup and final grading. A candidate's
 effective cap can be shorter when the search budget is nearly exhausted.
 
@@ -17,7 +18,8 @@ existing work drains before the full-data switch. Carry-over keeps GP history;
 reset fits only on full-parent/full-child transitions. Population and normal
 evolution continue. Only valid full-training programs can win.
 
-Long cheap evaluations can delay the switch substantially. A run with no valid
+Cheap executions are bounded by the remaining time to the 40% switch, so
+training is stopped there if it has not completed. A run with no valid
 full-data winner is a failure, not a cheap-data result. There is no automatic
 restart or replacement of failed runs.
 If the cheap search exhausts legal work before the cutoff, it stops immediately
@@ -28,9 +30,11 @@ The approved differences are fixed validation, redesigned evolution, the
 unverified historical Codex CLI version (ours is 0.164.0), and selection
 of the best full-data fixed-validation node instead of legacy final fusion.
 We request continuous allocations; historical runs included interruptions and
-repairs. Seven tasks' resources come from completed owner run records; the other
-seven come from the collaborator runbook's requested resources, not verified
-completed runs. See the manifest for per-task provenance.
+repairs. The Aerial Cactus pilot requests 64 GB host RAM after both 24 GB
+pilot workers reached the memory limit; this differs from the recorded owner
+allocation. Other resources come from the owner run or collaborator runbook;
+the latter are requested resources, not verified completed runs. See the
+manifest for per-task provenance.
 
 ## 1. Transfer and unpack once
 
@@ -109,10 +113,10 @@ Do not delete settings, protocols or search outputs to conceal a failed run.
 
 ```bash
 python3 tasks/mlebench_lite/mila_multifidelity.py submit-preflight \
-  --partition unkillable
+  --partition main
 ```
 
-This requests one A100 80GB, 4 CPUs, 24GB RAM, with a **20-minute maximum**.
+This requests one A100 80GB, 4 CPUs, 24GB RAM, with a **30-minute maximum**.
 It checks actual CUDA training/backpropagation, the embedding model, live
 OpenCode calls, and both modes through real CPU candidate execution and the
 three-worker search loop. LLM candidate replies in the integration tests are
@@ -150,8 +154,9 @@ Slurm applies your account limits.
 
 Mila's partition documentation checked on 2026-10-22 lists `unkillable` at
 6 CPUs/32GB, `main` at 8 CPUs/48GB, and `long` without these resource limits.
-The 4CPU/24GB cactus and RANZCR jobs and the 6CPU/32GB APTOS jobs fit
-`unkillable`. The other task allocations require `long` under these documented
+The 4CPU/24GB RANZCR job and the 6CPU/32GB APTOS job fit
+`unkillable`. Aerial Cactus now requests 64GB and must use `long`; the other
+larger task allocations also require `long` under these documented
 limits. **`long` is preemptible; interrupted searches support explicit recovery.**
 Use the recovery command below without changing resources or granting a fresh budget. CPU preparation
 (4CPU/64GB/24h) fits `main-cpu` or `long-cpu`, not `unkillable-cpu`.
@@ -178,7 +183,8 @@ excluded. Checkpoints are saved every 15 seconds and on interruption signals.
 Hard termination uses saved state and Slurm's recorded ending time; time spent
 on interrupted work remains charged. Incomplete training reruns the same saved
 program, with its earlier execution time deducted from the nine-hour candidate
-cap. This does not restore an in-training model/optimizer checkpoint. An
+cap and the remaining active time to the cheap-stage boundary, whichever is
+smaller. This does not restore an in-training model/optimizer checkpoint. An
 unfinished generation replays its saved decision and may require another LLM
 call; recovery does not guarantee an identical stochastic trajectory.
 

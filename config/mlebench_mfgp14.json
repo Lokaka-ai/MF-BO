@@ -22,7 +22,9 @@
     "Winner is the best valid full-training fixed-validation node; historical run used legacy final fusion.",
     "One continuous allocation is requested; historical owner runs included interruptions and runtime repairs.",
     "Contextual autoregressive MF-GP, adaptive cost-aware acquisition and immutable full-data promotions; original AQ05 kept as an experimental baseline.",
-    "Codex CLI 0.164.0 pinned for all arms; historical CLI version unverified. Current documented Go Responses endpoint used."
+    "Codex CLI 0.164.0 pinned for all arms; historical CLI version unverified. Current documented Go Responses endpoint used.",
+    "Mandatory initial half-data drafts stop at 40% of the active-time budget; full-data executions retain the nine-hour candidate cap.",
+    "Aerial Cactus pilot requests 64 GB host RAM after both 24 GB staged pilot workers hit the cgroup limit; historical allocation was 24 GB."
   ],
   "resource_sources": {
     "owner": "docs/MLEBENCH_LITE_AQ05_OWNER_RUN_20260921_zh.md: recorded per-task allocations",
@@ -31,8 +33,8 @@
   "tasks": {
     "aerial-cactus-identification": {
       "cpus": 4,
-      "memory_gb": 24,
-      "source": "owner"
+      "memory_gb": 64,
+      "source": "pilot_safety_after_24g_oom"
     },
     "aptos2019-blindness-detection": {
       "cpus": 6,

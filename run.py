@@ -12,7 +12,7 @@ from concurrent.futures import ThreadPoolExecutor, wait, FIRST_COMPLETED
 from engine.agent_search import AgentSearch as Agent
 from engine.executor import Interpreter
 from engine.search_node import Journal
-from engine.parent_selectors.runtime import SearchExhausted
+from engine.parent_selectors.runtime import SearchExhausted, SearchStatePersistenceError
 from engine.parent_selectors.agent_selector import AgentSelectionError
 from engine.fixed_evaluation import EvaluationError, enabled as fixed_enabled, finalize_submission
 from omegaconf import OmegaConf
@@ -214,7 +214,7 @@ def run():
                     pending_draft_nodes.append(cur_node)
                 logger.info(f"✅ Draft {draft_idx + 1} code generated: node.id={cur_node.id}, added to virtual_root.children")
 
-            except EvaluationError:
+            except (EvaluationError, SearchStatePersistenceError):
                 persist_run_state()
                 raise
             except Exception as e:
@@ -235,7 +235,7 @@ def run():
                 executed_node = agent.execute_deferred_node(node, exec_callback)
                 logger.info(f"✅ Draft node {executed_node.id} executed: metric={executed_node.metric.value}")
                 return executed_node
-            except EvaluationError:
+            except (EvaluationError, SearchStatePersistenceError):
                 raise
             except Exception as e:
                 logger.exception(f"❌ Exception during draft node {node.id} execution: {e}")
@@ -304,7 +304,7 @@ def run():
                         logger.info("Search worker finished: %s", e)
                         cur_node = None
                         exhausted = True
-                    except (AgentSelectionError, EvaluationError):
+                    except (AgentSelectionError, EvaluationError, SearchStatePersistenceError):
                         logger.exception("Agent selector failed; stopping this run without an algorithm fallback")
                         with lock:
                             persist_run_state()

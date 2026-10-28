@@ -23,7 +23,10 @@ from engine.operator_preview import (
     assert_preview_matches_node,
     execute_operator_preview,
 )
-from engine.parent_selectors.runtime import Phase1SelectorRuntime, StepDecisionContext, SelectionPending
+from engine.parent_selectors.runtime import (
+    Phase1SelectorRuntime, StepDecisionContext, SelectionPending,
+    SearchStatePersistenceError,
+)
 from utils.data_preview import clean_task_desc
 
 logger = logging.getLogger("MLEvolve")
@@ -378,6 +381,15 @@ class AgentSearch:
             return exec_callback(node.code, node.id, True)
         remaining = self.acfg.time_limit - (time.time() - self.start_time)
         context = self.fixed_evaluation.begin_attempt(node, remaining)
+        mode = self.fixed_evaluation.multifidelity_mode
+        if mode:
+            from engine.multifidelity import cheap_execution_seconds_left
+            cheap_left = cheap_execution_seconds_left(
+                mode, self.fixed_evaluation.multifidelity_phase, node,
+                self.start_time, self.acfg.time_limit, time.time(),
+            )
+            if cheap_left is not None:
+                context["timeout"] = min(context["timeout"], max(0.001, cheap_left))
         if context.get("working_dir"):
             return exec_callback(self.fixed_evaluation.executable(node.code), node.id, True, working_dir=context["working_dir"], evaluation_context=context)
         return exec_callback(node.code, node.id, True, evaluation_context=context)
@@ -522,7 +534,7 @@ class AgentSearch:
                             execution_wall_time_sec=0, metric_maximize=bool(self.metric_maximize), reward=-1,
                             failure_reason="empty_generation_result")
 
-            except EvaluationError:
+            except (EvaluationError, SearchStatePersistenceError):
                 # Infrastructure failure is not a failed proposal/GP observation.
                 raise
             except Exception as e:
@@ -686,7 +698,7 @@ class AgentSearch:
 
             return node
 
-        except EvaluationError:
+        except (EvaluationError, SearchStatePersistenceError):
             raise
         except Exception as e:
             logger.exception(f"Exception during deferred node execution: {e}")

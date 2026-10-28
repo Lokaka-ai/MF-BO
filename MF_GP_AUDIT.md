@@ -1,5 +1,12 @@
 # MF-GP implementation and launch audit — 2026-10-25
 
+> **Superseded as launch-readiness evidence on 2026-10-28.** Mila pilot jobs
+> 11417260–11417262 exposed two host-memory failures, a failed MF-GP draft path,
+> delayed fidelity switching, checkpoint recursion, and an unreported official
+> grading error. The verification and source-isolation claims below describe
+> the earlier source snapshot only. Use the repaired source and its fresh
+> preflight before any new full experiment.
+
 ## Current campaign update
 
 The 2026-10-26 approved provider revision is documented in `MILA_GO_ROUTE.md`.

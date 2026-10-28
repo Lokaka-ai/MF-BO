@@ -350,11 +350,11 @@ class Interpreter:
 
             if exc_type == "TimeoutError":
                 output.append(
-                    f"Execution time: TimeoutError: Execution exceeded the time limit of {humanize.naturaldelta(self.timeout)}"
+                    f"Execution time: TimeoutError: Execution exceeded the time limit of {humanize.naturaldelta(timeout)}"
                 )
             else:
                 output.append(
-                    f"Execution time: {humanize.naturaldelta(exec_time)} seconds (time limit is {humanize.naturaldelta(self.timeout)})."
+                    f"Execution time: {humanize.naturaldelta(exec_time)} seconds (time limit is {humanize.naturaldelta(timeout)})."
                 )
             
             return ExecutionResult(output, exec_time, exc_type, exc_info, exc_stack)

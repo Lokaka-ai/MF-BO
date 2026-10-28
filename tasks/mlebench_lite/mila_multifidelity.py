@@ -196,6 +196,7 @@ def prepare(args):
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
          "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
+         "tests/test_mila_failure_regressions.py",
          "tests/test_go_campaign.py", "tests/test_codex_retry.py", "tests/test_kaggle_download.py",
          *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
@@ -232,6 +233,16 @@ def ready(campaign):
     return settings
 
 
+def validate_gpu_partition(partition, resources):
+    # The documented Mila per-user main/unkillable memory limits are below
+    # the larger pilot request. Refuse a partial multi-job submission.
+    if resources["memory_gb"] > 48 and partition not in {"long", "long-grace"}:
+        raise ValueError(
+            f"{resources['memory_gb']} GB host RAM requires a long partition; "
+            f"got {partition!r}"
+        )
+
+
 def submit(args):
     settings = ready(args.campaign)
     gpu_ready = read(args.campaign / "gpu-ready.json")
@@ -241,6 +252,8 @@ def submit(args):
     tasks = args.tasks or list(spec["tasks"])
     if set(tasks) - set(spec["tasks"]):
         raise ValueError("Task is not in this prepared campaign")
+    for task in tasks:
+        validate_gpu_partition(args.partition, spec["tasks"][task])
     with submission_lock(args.campaign):
         for task in tasks:
             resources = spec["tasks"][task]
@@ -254,7 +267,7 @@ def submit_preflight(args):
     ready(args.campaign)
     with submission_lock(args.campaign):
         sbatch(args.campaign, "gpu-preflight", batch_command(
-            args.campaign, args.partition, 4, 24, "00:20:00", ["preflight"], gpu=True))
+            args.campaign, args.partition, 4, 24, "00:30:00", ["preflight"], gpu=True))
 
 
 def preflight(args):
@@ -385,6 +398,7 @@ def resume(args):
         segment = read(output / "segment.json")
         recovery = recovery_record(output, released_job(segment["job_id"]))
         resources = settings["spec"]["tasks"][args.task]
+        validate_gpu_partition(args.partition, resources)
         save(output / "recovery.json", recovery)
         command = batch_command(args.campaign, args.partition, resources["cpus"], resources["memory_gb"],
             settings["spec"]["slurm_time"], ["worker", "--task", args.task, "--mode", args.mode, "--resume-run"], gpu=True)
@@ -433,6 +447,39 @@ def run_search(command, env, output, active_offset=0):
             proc.wait()
         for sig, handler in prior.items():
             signal.signal(sig, handler)
+
+
+def official_grade(logs, data_dir, env, output):
+    grade = subprocess.run(
+        [str(PYTHON), "-m", "utils.grade_submission", "--log-dir", str(logs),
+         "--data-dir", str(data_dir)],
+        cwd=ROOT, env=env, capture_output=True, text=True,
+    )
+    # Capture the actual grader exception before raising. The previous worker
+    # discarded stderr, leaving a failed grade indistinguishable from OOM.
+    diagnostic = output / "official-grade-process.json"
+    save(diagnostic, {"returncode": grade.returncode,
+                      "stdout": grade.stdout, "stderr": grade.stderr})
+    if grade.returncode:
+        raise RuntimeError(f"Official grading exited {grade.returncode}; see {diagnostic}")
+    return json.loads(grade.stdout)
+
+
+def validate_terminal_ledger(journal, mode):
+    state = journal.get("parent_selector_state") or {}
+    pending = state.get("pending") or {}
+    if pending:
+        raise RuntimeError(
+            f"Search returned with {len(pending)} unresolved decisions; "
+            "do not grade or report this run as complete"
+        )
+    if mode == "mf_gp":
+        selector = state.get("study7_state") or {}
+        promotions = selector.get("pending_promotions") or {}
+        if promotions:
+            raise RuntimeError(
+                f"MF-GP returned with {len(promotions)} unresolved promotions"
+            )
 
 
 def worker(args):
@@ -496,6 +543,7 @@ def worker(args):
             if str(actual).lower() != value.lower():
                 raise RuntimeError(f"Saved configuration differs at {key}")
         journal = read(logs / "journal.json")
+        validate_terminal_ledger(journal, args.mode)
         records = (logs / "phase1/transitions.jsonl").read_text().splitlines()
         ended_before_limit = (journal["elapsed_active_seconds"] < spec["time_limit_seconds"]
                               and len(records) < spec["steps"])
@@ -513,9 +561,7 @@ def worker(args):
                                   and completed_actions < spec["steps"])
         elif node.get("training_fraction") != 1.0:
             raise RuntimeError("Winner was not trained on full T")
-        grade = run([PYTHON, "-m", "utils.grade_submission", "--log-dir", logs,
-                     "--data-dir", settings["data_dir"]], env=env, capture_output=True, text=True)
-        report = json.loads(grade.stdout)
+        report = official_grade(logs, settings["data_dir"], env, output)
         if report.get("report") is None:
             raise RuntimeError("Official grading returned no report")
         save(output / "official-grade.json", report)

@@ -122,11 +122,17 @@ def get_top_k_nodes_global(agent, k: int, max_from_same_branch: int) -> List[dic
         logger.warning("No valid nodes found for Top-K selection")
         return []
 
-    maximize = agent.metric_maximize
-    all_nodes.sort(
-        key=lambda n: n.metric.value,
-        reverse=maximize
-    )
+    mf_gp = getattr(getattr(getattr(agent, "cfg", None), "evaluation", None),
+                    "multifidelity_mode", None) == "mf_gp"
+    if mf_gp:
+        # Raw cheap and full validation scores are not comparable for Top-K
+        # extension eligibility. Use the controller's common full-fidelity
+        # quality estimate, also used by the MF top-candidate archive.
+        from engine.mf_gp.evidence import quality
+        all_nodes.sort(key=lambda n: quality(agent, n), reverse=True)
+    else:
+        all_nodes.sort(key=lambda n: n.metric.value,
+                       reverse=agent.metric_maximize)
 
     logger.info(f"Total valid nodes: {len(all_nodes)}, requesting Top-{k}")
 

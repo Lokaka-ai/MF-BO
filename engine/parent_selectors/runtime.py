@@ -117,6 +117,10 @@ class SearchExhausted(RuntimeError):
     """No legal action remains within the existing budget."""
 
 
+class SearchStatePersistenceError(RuntimeError):
+    """A decision checkpoint could not be written; search must stop."""
+
+
 @dataclass(frozen=True)
 class StepDecisionContext:
     result: SelectorResult
@@ -632,6 +636,16 @@ class Phase1SelectorRuntime:
         return True
 
     def _persist_root_state(self, agent) -> None:
+        try:
+            self._persist_root_state_unchecked(agent)
+        except SearchStatePersistenceError:
+            raise
+        except Exception as exc:
+            raise SearchStatePersistenceError(
+                "Parent-selection checkpoint failed; search cannot safely continue"
+            ) from exc
+
+    def _persist_root_state_unchecked(self, agent) -> None:
         from engine.search_node import Journal
         from utils import serialize
         from utils.seed import capture_random_state
@@ -1861,6 +1875,11 @@ class Phase1SelectorRuntime:
                 self.study7_selector.observe(self.transition_store.records())
             self.root_draft_state["initial_terminal"] += int(pending["initial"])
             del self.root_draft_state["pending"][decision_id]
+            if child_node is not None and hasattr(child_node, "_phase1_decision_context"):
+                # The terminal record has the frozen decision. Keeping this
+                # live context on the node retains references to candidate
+                # options and their graph after the decision is closed.
+                del child_node._phase1_decision_context
             self._persist_root_state(self._agent)
             return record
 

@@ -278,6 +278,8 @@ class SearchNode(DataClassJsonMixin):
                 summary_part += f"Results: The implementation of this design has bugs.\n"
                 summary_part += f"Insight: Using a different approach may not result in the same bugs as the above approach.\n"
             else:
+                if n.metric is None or n.metric.value is None:
+                    summary_part += "Status: Execution or scoring pending.\n"
                 if n.analysis:
                     summary_part += f"Results: {n.analysis}\n"
                 if n.metric and n.metric.value is not None:
@@ -292,9 +294,13 @@ class SearchNode(DataClassJsonMixin):
             summary.append("")
         else:
             total_attempts = len(sorted_children)
-            pending = [n for n in sorted_children if n.is_buggy is None]
-            executed = [n for n in sorted_children if n.is_buggy is not None]
-            successful = [n for n in executed if n.is_buggy is False]
+            pending = [n for n in sorted_children if n.is_buggy is None
+                       or (n.is_buggy is False and (n.metric is None or n.metric.value is None))]
+            executed = [n for n in sorted_children if n not in pending]
+            # A concurrent execution may mark the node non-buggy before its
+            # externally scored metric is attached. It is not yet a success.
+            successful = [n for n in executed if n.is_buggy is False
+                          and n.metric is not None and n.metric.value is not None]
 
             stats_parts = []
             if pending:
@@ -302,7 +308,7 @@ class SearchNode(DataClassJsonMixin):
             if executed:
                 stats_parts.append(f"{len(executed)} executed")
                 if successful:
-                    best_metric = max(n.metric for n in successful if n.metric and n.metric.value is not None).value
+                    best_metric = max(n.metric for n in successful).value
                     stats_parts.append(f"{len(successful)} successful (best: {best_metric:.4f})")
                 else:
                     stats_parts.append(f"0 successful (all failed or buggy)")
@@ -545,7 +551,11 @@ def get_longest_path(journal: Journal) -> list[str]:
 
 
 def filter_on_path(journal: Journal, path: list[str]) -> Journal:
-    journal_copy = copy.deepcopy(journal)
+    # save_run writes this filtered view after the full checkpoint. A live
+    # decision context may still refer to the entire option graph, so a raw
+    # deepcopy here can recreate the same recursion failure as the checkpoint.
+    from utils import serialize
+    journal_copy = serialize.loads_json(serialize.dumps_json(journal), Journal)
     journal_copy.nodes = [n for n in journal_copy.nodes if n.id in path]
     for n in journal_copy.nodes:
         n._term_out = "<OMITTED>"
@@ -564,6 +574,11 @@ def filter_for_longest_path(journal: Journal) -> Journal:
 
 
 def filter_journal(journal: Journal) -> Journal:
+    if (journal.evaluation_state or {}).get("multifidelity_mode") in {"mf_gp", "carry_over", "reset"}:
+        from engine.multifidelity import completed_full_winner
+        full_best = completed_full_winner(journal)
+        if full_best is not None:
+            return filter_for_best_path(journal, full_best.id)
     best_node = journal.get_best_node(only_good=True)
     if best_node is not None:
         return filter_for_best_path(journal, best_node.id)

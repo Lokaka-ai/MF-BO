@@ -7,7 +7,11 @@ reasoning and Codex CLI 0.164.0. Earlier native OpenCode packages are superseded
 for this newly approved model route.
 The new campaign has 14 jobs: one `mf_gp` run per retained Lite task, each with
 12 hours active search, 500 total actions, 3 initial drafts/workers, seed 42,
-one A100 80GB and the same task-specific CPU/RAM allocations as the baseline.
+one A100 80GB. The Aerial Cactus pilot requests 4 CPUs and 64 GB host RAM after
+both staged 24 GB workers reached the cgroup limit; this differs from Xixian's
+recorded 24 GB allocation. Other task allocations remain as configured.
+Mandatory initial half-data drafts have a 40%-of-active-time execution deadline;
+full-data attempts retain the nine-hour candidate cap.
 
 ## Before transferring
 
@@ -55,7 +59,7 @@ python3 tasks/mlebench_lite/package_mfgp.py --output-dir /path/to/deliverables
    GPU/provider preflight:
 
    ```bash
-   python3 tasks/mlebench_lite/mila_mfgp.py submit-preflight --partition unkillable
+   python3 tasks/mlebench_lite/mila_mfgp.py submit-preflight --partition main
    ```
 
 5. Only after that succeeds (`runs/mf14_gp/gpu-ready.json`), submit the runs:

@@ -521,7 +521,11 @@ def save_run(cfg: Config, journal):
     config_temp.replace(cfg.log_dir / "config.yaml")
     
     # save the best found solution
-    best_node = journal.get_best_node()
+    if getattr(getattr(cfg, "evaluation", None), "multifidelity_mode", None) in {"mf_gp", "carry_over", "reset"}:
+        from engine.multifidelity import completed_full_winner
+        best_node = completed_full_winner(journal)
+    else:
+        best_node = journal.get_best_node()
     if best_node is not None:
         with open(cfg.log_dir / "best_solution.py", "w") as f:
             f.write(best_node.code)

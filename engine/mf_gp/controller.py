@@ -66,7 +66,8 @@ class MFSelector:
         for r in records:
             if r.transition_id in self.seen:
                 continue
-            node = (r.metadata or {}).get("node_snapshot", {}).get("node", {})
+            metadata = r.metadata or {}
+            node = (metadata.get("node_snapshot") or {}).get("node") or {}
             if r.child_node_id and node:
                 mf = r.selection_features.get("mf", {})
                 x = mf.get("x", [0.0] * 8)
@@ -99,7 +100,7 @@ class MFSelector:
                         fidelity=fidelity,
                         valid=valid,
                         utility=float(r.child_utility) if valid else None,
-                        budget_eligible=r.metadata.get("budget_eligible", True),
+                        budget_eligible=metadata.get("budget_eligible", True),
                         result=node.get("evaluation_result"),
                         transition_id=r.transition_id,
                         generation_seconds=r.generation_wall_time_sec,
@@ -373,7 +374,9 @@ class MFSelector:
                         option_index=index,
                     )
                 )
-                targets[row["program_id"]] = row
+                # Both actions probe the same prospective program, but the
+                # controller's objective is its full-data quality. The cheap
+                # action must not replace the full-data target in KG.
         selected = None
         for p in self.calibration:
             if p in completed_high or p in pending_high:

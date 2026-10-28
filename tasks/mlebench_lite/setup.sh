@@ -12,7 +12,11 @@ if [[ "$(git -C mle-bench rev-parse HEAD)" != "$MLEBENCH_COMMIT" ]]; then
   echo "mle-bench must be at $MLEBENCH_COMMIT; refusing to change an existing checkout." >&2
   exit 1
 fi
+git -C mle-bench lfs install --local --skip-repo
 git -C mle-bench lfs pull
+# Some cluster Git/LFS combinations fetch objects but leave pointer files in
+# the working tree. Checkout is local-only; preparation verifies the result.
+git -C mle-bench lfs checkout
 export UV_LINK_MODE="${UV_LINK_MODE:-copy}"
 export UV_CACHE_DIR="${UV_CACHE_DIR:-$PROJECT_DIR/.cache/uv-mlebench}"
 if [[ ! -x .venv-mlebench/bin/python ]]; then

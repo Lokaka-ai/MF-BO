@@ -167,6 +167,35 @@ def verify_codex(settings, output):
                   "sha256": sha(Path(binary).resolve())})
 
 
+def verify_leaderboards(tasks):
+    """Fail before GPU work if an official grader input is still an LFS pointer."""
+    verified = {}
+    for task in tasks:
+        path = ROOT / "mle-bench" / "mlebench" / "competitions" / task / "leaderboard.csv"
+        if not path.is_file():
+            raise RuntimeError(f"Missing MLE-bench leaderboard: {path}")
+        with path.open(encoding="utf-8-sig", newline="") as stream:
+            reader = csv.DictReader(stream)
+            if not reader.fieldnames or "score" not in reader.fieldnames:
+                raise RuntimeError(
+                    f"MLE-bench leaderboard for {task} has no score column; "
+                    "check Git LFS checkout before submitting GPU work"
+                )
+            rows = 0
+            for row in reader:
+                try:
+                    score = float(row["score"])
+                except (TypeError, ValueError) as exc:
+                    raise RuntimeError(f"Invalid leaderboard score for {task}, row {rows + 2}") from exc
+                if not math.isfinite(score):
+                    raise RuntimeError(f"Nonfinite leaderboard score for {task}, row {rows + 2}")
+                rows += 1
+        if not rows:
+            raise RuntimeError(f"Empty MLE-bench leaderboard for {task}")
+        verified[task] = {"sha256": sha(path), "rows": rows}
+    return verified
+
+
 def provider_check_command(settings, output):
     spec = settings["spec"]
     return [PYTHON, "tools/check_go_provider.py", "--model", spec["model"],
@@ -193,16 +222,17 @@ def prepare(args):
     run(["git", "lfs", "version"])
     env = environment(settings)
     run(["bash", "tasks/mlebench_lite/setup.sh"], env=env)
+    spec = settings["spec"]
+    leaderboards = verify_leaderboards(spec["tasks"])
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider", "tests/test_multifidelity.py",
          "tests/test_multifidelity_campaign.py", "tests/test_study7_math.py", "tests/test_fixed_evaluation.py",
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
-         "tests/test_mila_failure_regressions.py",
+         "tests/test_mila_failure_regressions.py", "tests/test_mila_leaderboard.py",
          "tests/test_go_campaign.py", "tests/test_codex_retry.py", "tests/test_kaggle_download.py",
          *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
     run(provider_check_command(settings, args.campaign / "provider-check.json"), env=env)
-    spec = settings["spec"]
     run([PYTHON, "tasks/mlebench_lite/prepare.py", "--data-dir", settings["data_dir"],
          "--token-file", settings["token_file"], "--workers", "3", "--tasks", *spec["tasks"]], env=env)
     protocols = {}
@@ -219,7 +249,7 @@ def prepare(args):
         protocol = read(directory / "protocol.json")
         protocols[task] = {key: protocol[key] for key in ("protocol_id", "metric", "split")}
     save(args.campaign / "ready.json", {"settings_sha256": sha(args.campaign / "settings.json"),
-                                       "protocols": protocols})
+                                       "protocols": protocols, "leaderboards": leaderboards})
     print("Preparation passed. Submit the short GPU preflight before any full search.")
 
 
@@ -230,6 +260,8 @@ def ready(campaign):
     settings = read(campaign / "settings.json")
     if settings["source"] != source_hashes():
         raise RuntimeError("Prepared campaign source changed")
+    if record.get("leaderboards") != verify_leaderboards(settings["spec"]["tasks"]):
+        raise RuntimeError("Prepared MLE-bench leaderboards changed or are unresolved LFS pointers")
     return settings
 
 

@@ -631,9 +631,8 @@ def main(*, modes=("carry_over", "reset"), default_campaign=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("command", choices=("submit-prepare", "prepare", "submit-preflight", "preflight", "submit", "resume", "worker", "collect"))
     parser.add_argument("--campaign", type=Path, default=default_campaign or ROOT / "runs/mf14_aq05")
-    if "mf_gp" in modes:
-        parser.add_argument("--protocol-source", type=Path,
-            help="Existing baseline campaign's protocols directory; reuse its exact T/V/scorer")
+    parser.add_argument("--protocol-source", type=Path,
+        help="Frozen protocols directory; reuse its exact T/V/scorer across campaigns")
     parser.add_argument("--partition", help="Your available Slurm partition; required for submissions")
     parser.add_argument("--key-file", type=Path)
     parser.add_argument("--token-file", type=Path)

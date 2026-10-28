@@ -3,6 +3,7 @@ import importlib.util
 import json
 from pathlib import Path
 import shlex
+import sys
 import tempfile
 from types import SimpleNamespace
 import unittest
@@ -20,6 +21,15 @@ class CampaignTests(unittest.TestCase):
         self.addCleanup(self.temp.cleanup)
         self.path = Path(self.temp.name)
         self.settings = {"spec": campaign.read(campaign.SPEC), "data_dir": "/data with spaces"}
+
+    def test_baseline_cli_accepts_frozen_protocol_source(self):
+        source = self.path / "frozen protocols"
+        argv = ["mila_multifidelity.py", "submit-prepare", "--partition", "main-cpu",
+                "--key-file", str(self.path / "key"), "--token-file", str(self.path / "token"),
+                "--protocol-source", str(source)]
+        with patch.object(sys, "argv", argv), patch.object(campaign, "submit_preparation") as submit:
+            campaign.main(modes=("carry_over", "reset"), default_campaign=self.path / "pilot")
+        self.assertEqual(submit.call_args.args[0].protocol_source, source)
 
     def test_commands_match_approved_protocol(self):
         manifest = self.settings["spec"]
@@ -149,7 +159,7 @@ def test_one_task_preparation_scope_and_submission(tmp_path, monkeypatch, manife
     directory = tmp_path / "campaign"
     args = SimpleNamespace(campaign=directory, partition="main-cpu", key_file=key,
         token_file=token, data_dir=tmp_path / "data", tasks=[task],
-        protocol_source=source if modes == ["mf_gp"] else None)
+        protocol_source=source)
     with patch.object(campaign, "run", return_value=SimpleNamespace(stdout="12345\n")):
         campaign.submit_preparation(args)
     settings = campaign.read(directory / "settings.json")

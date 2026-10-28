@@ -94,6 +94,34 @@ class CampaignTests(unittest.TestCase):
             with self.assertRaisesRegex(RuntimeError, "source changed"):
                 campaign.source_hashes()
 
+    def test_baseline_preparation_reuses_requested_frozen_protocol(self):
+        from tasks.mlebench_lite.mfgp_protocols import register_source
+
+        task = "aerial-cactus-identification"
+        source = self.path / "source"
+        campaign.save(source / task / "protocol.json", {
+            "task_id": task, "protocol_id": "frozen", "metric": {"name": "roc_auc"},
+            "split": {"seed": 42},
+        })
+        destination = self.path / "prepared"
+        settings = {
+            "source": {"source": "hash"}, "data_dir": "/data", "token_file": "/token",
+            "spec": {"tasks": {task: {}}, "modes": ["carry_over", "reset"],
+                     "seed": 42, "model": "muse", "provider": "codex://opencode-go"},
+            "protocol_source": register_source(source, [task]),
+        }
+        campaign.save(destination / "settings.json", settings)
+        with patch.object(campaign, "require_allocation"), \
+             patch.object(campaign, "source_hashes", return_value=settings["source"]), \
+             patch.object(campaign, "verify_codex"), \
+             patch.object(campaign, "verify_leaderboards", return_value={task: {"sha256": "x", "rows": 2}}), \
+             patch.object(campaign, "environment", return_value={}), \
+             patch.object(campaign.shutil, "which", return_value="/usr/bin/true"), \
+             patch.object(campaign, "run"):
+            campaign.prepare(SimpleNamespace(campaign=destination))
+        self.assertEqual((destination / "protocols" / task).resolve(), (source / task).resolve())
+        self.assertEqual(campaign.read(destination / "ready.json")["protocols"][task]["protocol_id"], "frozen")
+
 
 if __name__ == "__main__":
     unittest.main()

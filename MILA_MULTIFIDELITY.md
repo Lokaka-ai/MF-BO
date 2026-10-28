@@ -92,6 +92,11 @@ python3 tasks/mlebench_lite/mila_multifidelity.py submit-prepare \
   --data-dir /YOUR/PERSISTENT/PATH/mlebench-data
 ```
 
+For a matched rerun, also pass `--protocol-source` with the existing baseline
+campaign's `protocols` directory. Carry-over, reset, and MF-GP then reuse the
+same frozen validation membership and scorer. Keep that source directory until
+the new campaigns finish.
+
 Preparation requests 4 CPUs, 64GB RAM and up to 24 hours (operational setup,
 outside the search allocation). It installs locked dependencies, runs regression
 tests, checks the live provider, prepares datasets, and creates one shared fixed

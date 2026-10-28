@@ -237,7 +237,7 @@ def prepare(args):
          "--token-file", settings["token_file"], "--workers", "3", "--tasks", *spec["tasks"]], env=env)
     protocols = {}
     for task in spec["tasks"]:
-        if "mf_gp" in spec["modes"]:
+        if settings.get("protocol_source") is not None:
             from tasks.mlebench_lite.mfgp_protocols import attach_source
             attach_source(settings, args.campaign, task)
         directory = args.campaign / "protocols" / task

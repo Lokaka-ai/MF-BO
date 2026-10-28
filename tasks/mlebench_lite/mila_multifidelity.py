@@ -23,6 +23,7 @@ from datetime import datetime, timezone
 from contextlib import contextmanager
 
 ROOT = Path(__file__).resolve().parents[2]
+sys.path.insert(0, str(ROOT))
 SPEC = ROOT / "config/mlebench_mf14.json"
 PYTHON = ROOT / ".venv-mlebench/bin/python"
 SCRIPT = Path(__file__).resolve()

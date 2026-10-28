@@ -1,8 +1,10 @@
 """Offline launch checks; also runnable without ML dependencies via unittest."""
 import importlib.util
 import json
+import os
 from pathlib import Path
 import shlex
+import subprocess
 import sys
 import tempfile
 from types import SimpleNamespace
@@ -30,6 +32,31 @@ class CampaignTests(unittest.TestCase):
         with patch.object(sys, "argv", argv), patch.object(campaign, "submit_preparation") as submit:
             campaign.main(modes=("carry_over", "reset"), default_campaign=self.path / "pilot")
         self.assertEqual(submit.call_args.args[0].protocol_source, source)
+
+    def test_baseline_script_registers_protocol_without_pythonpath(self):
+        task = "aerial-cactus-identification"
+        source = self.path / "frozen protocols"
+        campaign.save(source / task / "protocol.json", {"task_id": task, "protocol_id": "frozen"})
+        key, token = self.path / "key", self.path / "token"
+        key.touch()
+        token.touch()
+        fake_bin = self.path / "fake bin"
+        fake_bin.mkdir()
+        fake_sbatch = fake_bin / "sbatch"
+        fake_sbatch.write_text("#!/bin/sh\nprintf '12345\\n'\n")
+        fake_sbatch.chmod(0o755)
+        destination = self.path / "pilot"
+        env = dict(os.environ, PATH=f"{fake_bin}:{os.environ['PATH']}")
+        env.pop("PYTHONPATH", None)
+        result = subprocess.run([sys.executable,
+            str(ROOT / "tasks/mlebench_lite/mila_multifidelity.py"), "submit-prepare",
+            "--campaign", str(destination), "--partition", "main-cpu",
+            "--tasks", task, "--key-file", str(key), "--token-file", str(token),
+            "--protocol-source", str(source)], cwd=self.path, env=env,
+            capture_output=True, text=True)
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(campaign.read(destination / "settings.json")["protocol_source"]["protocol_ids"],
+                         {task: "frozen"})
 
     def test_commands_match_approved_protocol(self):
         manifest = self.settings["spec"]

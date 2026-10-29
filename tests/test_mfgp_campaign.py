@@ -36,7 +36,7 @@ def test_submit_exactly_fourteen_mf_jobs_and_isolate_campaign(tmp_path, monkeypa
         tmp_path / "gpu-ready.json",
         {"settings_sha256": campaign.sha(tmp_path / "settings.json")},
     )
-    with patch.object(
+    with patch.object(campaign, "verify_codex"), patch.object(
         campaign, "run", return_value=SimpleNamespace(stdout="12345\n")
     ) as run:
         args = SimpleNamespace(campaign=tmp_path, partition="long", tasks=None)

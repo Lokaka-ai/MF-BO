@@ -40,6 +40,7 @@ def test_cli_version_drift_blocks_run(tmp_path, monkeypatch):
     spec = campaign.read(campaign.SPEC)
     binary = tmp_path / "codex"
     binary.write_text("fixture")
+    binary.chmod(0o755)
     monkeypatch.setenv("MLEVOLVE_REAL_CODEX_BIN", str(binary))
     monkeypatch.setattr(campaign, "run", lambda *a, **kw: NS(stdout="codex-cli 0.163.0\n"))
     with pytest.raises(RuntimeError, match="version differs"):
@@ -48,6 +49,26 @@ def test_cli_version_drift_blocks_run(tmp_path, monkeypatch):
     monkeypatch.setattr(campaign, "run", lambda *a, **kw: NS(stdout="codex-cli 0.164.0\n"))
     campaign.verify_codex({"spec": spec}, tmp_path / "receipt.json")
     assert campaign.read(tmp_path / "receipt.json")["sha256"] == campaign.sha(binary)
+
+
+def test_worker_uses_preflight_codex_without_submitter_path(tmp_path, monkeypatch):
+    spec = campaign.read(campaign.SPEC)
+    binary = tmp_path / "codex"
+    binary.write_text("#!/bin/sh\nprintf 'codex-cli 0.164.0\\n'\n")
+    binary.chmod(0o755)
+    pinned = tmp_path / "gpu-codex-runtime.json"
+    campaign.save(pinned, {"binary": str(binary.resolve()), "version": "codex-cli 0.164.0",
+                           "sha256": campaign.sha(binary)})
+    monkeypatch.delenv("MLEVOLVE_REAL_CODEX_BIN", raising=False)
+    monkeypatch.setattr(campaign.shutil, "which", lambda _: None)
+    settings = {"spec": spec, "key_file": "/key"}
+    record = campaign.verify_codex(settings, tmp_path / "worker-codex-runtime.json",
+                                   reference=pinned)
+    env = campaign.environment(settings, record["binary"])
+    assert env["MLEVOLVE_REAL_CODEX_BIN"] == str(binary.resolve())
+    binary.write_text(binary.read_text() + "# changed after preflight\n")
+    with pytest.raises(RuntimeError, match="differs from the prepared/preflight binary"):
+        campaign.verify_codex(settings, tmp_path / "drift.json", reference=pinned)
 
 
 def test_generation_and_feedback_dispatch_to_go_high(tmp_path, monkeypatch):

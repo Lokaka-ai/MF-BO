@@ -87,6 +87,7 @@ class CampaignTests(unittest.TestCase):
         campaign.save(self.path / "settings.json", self.settings)
         campaign.save(self.path / "gpu-ready.json", {"settings_sha256": campaign.sha(self.path / "settings.json")})
         with patch.object(campaign, "ready", return_value=self.settings), \
+             patch.object(campaign, "verify_codex"), \
              patch.object(campaign, "run", return_value=SimpleNamespace(stdout="12345\n")) as run:
             campaign.submit(args)
             self.assertEqual(run.call_count, 28)
@@ -107,6 +108,23 @@ class CampaignTests(unittest.TestCase):
             with self.assertRaises(FileNotFoundError):
                 campaign.submit(args)
         run.assert_not_called()
+
+    def test_submit_rejects_changed_codex_before_sbatch(self):
+        binary = self.path / "codex"
+        binary.write_text("#!/bin/sh\nprintf 'codex-cli 0.164.0\\n'\n")
+        binary.chmod(0o755)
+        campaign.save(self.path / "settings.json", self.settings)
+        campaign.save(self.path / "gpu-ready.json", {
+            "settings_sha256": campaign.sha(self.path / "settings.json")})
+        campaign.save(self.path / "gpu-codex-runtime.json", {
+            "binary": str(binary.resolve()), "version": "codex-cli 0.164.0",
+            "sha256": "stale-preflight-hash"})
+        args = SimpleNamespace(campaign=self.path, partition="long", tasks=None)
+        with patch.object(campaign, "ready", return_value=self.settings), \
+             patch.object(campaign, "sbatch") as sbatch:
+            with self.assertRaisesRegex(RuntimeError, "differs from the prepared/preflight"):
+                campaign.submit(args)
+        sbatch.assert_not_called()
 
     def test_unknown_submission_is_not_retried(self):
         campaign.save(self.path / "jobs.json", {"x": {"state": "submitting"}})
@@ -196,7 +214,8 @@ def test_one_task_preparation_scope_and_submission(tmp_path, monkeypatch, manife
         assert settings["protocol_source"]["protocol_ids"] == {task: "frozen"}
     monkeypatch.setattr(campaign, "ready", lambda _: settings)
     campaign.save(directory / "gpu-ready.json", {"settings_sha256": campaign.sha(directory / "settings.json")})
-    with patch.object(campaign, "run", return_value=SimpleNamespace(stdout="12346\n")) as run:
+    with patch.object(campaign, "verify_codex"), \
+         patch.object(campaign, "run", return_value=SimpleNamespace(stdout="12346\n")) as run:
         campaign.submit(SimpleNamespace(campaign=directory, partition="long", tasks=None))
         assert run.call_count == len(modes)
         for call in run.call_args_list:

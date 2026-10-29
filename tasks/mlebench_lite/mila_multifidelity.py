@@ -63,7 +63,7 @@ def source_hashes():
     return {name: sha(ROOT / name) for name in names if (ROOT / name).is_file()}
 
 
-def environment(settings):
+def environment(settings, codex_bin=None):
     env = dict(os.environ)
     env.update(OPENCODE_API_KEY_FILE=settings["key_file"], MLEVOLVE_OPENCODE_REASONING_EFFORT="high",
                MLEVOLVE_MF_RECOVERY="1",
@@ -74,6 +74,9 @@ def environment(settings):
                TORCH_HOME=str(ROOT / ".cache/mlebench-lite/torch"))
     if settings["spec"]["provider"] == "codex://opencode-go":
         env.pop("OPENCODE_API_KEY", None)  # Use the explicit campaign credential file.
+        if codex_bin is not None:
+            # The submitting shell's PATH is not necessarily the worker's PATH.
+            env["MLEVOLVE_REAL_CODEX_BIN"] = str(codex_bin)
         env["MLEVOLVE_CODEX_TIMEOUT_SECONDS"] = "1800"
         env["MLEVOLVE_CODEX_BIN"] = str(ROOT / "tools/codex_opencode.py")
         env["MLEVOLVE_CODEX_REASONING_EFFORT"] = settings["spec"]["reasoning_effort"]
@@ -155,17 +158,25 @@ def submit_preparation(args):
                                                  "24:00:00", ["prepare"]))
 
 
-def verify_codex(settings, output):
-    binary = os.environ.get("MLEVOLVE_REAL_CODEX_BIN") or shutil.which("codex")
-    if not binary:
-        raise RuntimeError("Codex CLI is missing")
-    result = run([binary, "--version"], capture_output=True, text=True)
+def verify_codex(settings, output, *, reference=None):
+    pinned = read(reference) if reference is not None else None
+    binary = (pinned["binary"] if pinned is not None else
+              os.environ.get("MLEVOLVE_REAL_CODEX_BIN") or shutil.which("codex") or
+              str(Path.home() / ".local/bin/codex"))
+    path = Path(binary)
+    if not path.is_absolute() or not path.is_file() or not os.access(path, os.X_OK):
+        raise RuntimeError(f"Codex CLI is missing or not executable: {path}")
+    path = path.resolve()
+    result = run([path, "--version"], capture_output=True, text=True)
     version = result.stdout.strip()
     expected = "codex-cli " + settings["spec"]["codex_version"]
     if version != expected:
         raise RuntimeError(f"Codex version differs: expected {expected}, got {version}")
-    save(output, {"binary": str(Path(binary).resolve()), "version": version,
-                  "sha256": sha(Path(binary).resolve())})
+    record = {"binary": str(path), "version": version, "sha256": sha(path)}
+    if pinned is not None and record != pinned:
+        raise RuntimeError("Codex binary differs from the prepared/preflight binary")
+    save(output, record)
+    return record
 
 
 def verify_leaderboards(tasks):
@@ -214,14 +225,15 @@ def prepare(args):
     if settings["source"] != source_hashes():
         raise RuntimeError("Campaign source changed")
     missing = [name for name in ("uv", "git", "unzip", "7z", "ffmpeg") if not shutil.which(name)]
-    codex = os.environ.get("MLEVOLVE_REAL_CODEX_BIN") or shutil.which("codex")
+    codex = (os.environ.get("MLEVOLVE_REAL_CODEX_BIN") or shutil.which("codex") or
+             str(Path.home() / ".local/bin/codex"))
     if not codex or not Path(codex).is_file():
         missing.append("codex (or MLEVOLVE_REAL_CODEX_BIN)")
     if missing:
         raise RuntimeError("Load/install prerequisites before preparation: " + ", ".join(missing))
-    verify_codex(settings, args.campaign / "codex-runtime.json")
+    codex_runtime = verify_codex(settings, args.campaign / "codex-runtime.json")
     run(["git", "lfs", "version"])
-    env = environment(settings)
+    env = environment(settings, codex_runtime["binary"])
     run(["bash", "tasks/mlebench_lite/setup.sh"], env=env)
     spec = settings["spec"]
     leaderboards = verify_leaderboards(spec["tasks"])
@@ -281,6 +293,8 @@ def submit(args):
     gpu_ready = read(args.campaign / "gpu-ready.json")
     if gpu_ready.get("settings_sha256") != sha(args.campaign / "settings.json"):
         raise RuntimeError("Short GPU preflight has not passed for these campaign settings")
+    verify_codex(settings, args.campaign / "submission-codex-runtime.json",
+                 reference=args.campaign / "gpu-codex-runtime.json")
     spec = settings["spec"]
     tasks = args.tasks or list(spec["tasks"])
     if set(tasks) - set(spec["tasks"]):
@@ -308,7 +322,9 @@ def preflight(args):
     if Path(sys.prefix).resolve() != PYTHON.parent.parent.resolve():
         os.execv(str(PYTHON), [str(PYTHON), str(SCRIPT), *sys.argv[1:]])
     settings = ready(args.campaign)
-    env = environment(settings)
+    codex_runtime = verify_codex(settings, args.campaign / "gpu-codex-runtime.json",
+                                 reference=args.campaign / "codex-runtime.json")
+    env = environment(settings, codex_runtime["binary"])
     import torch
     if torch.cuda.device_count() != 1:
         raise RuntimeError("Preflight requires one Slurm-visible GPU")
@@ -328,7 +344,6 @@ def preflight(args):
         raise RuntimeError("CUDA training preflight produced nonfinite loss")
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--require-cuda", "--embedding",
          "--output", args.campaign / "gpu-environment.json"], env=env)
-    verify_codex(settings, args.campaign / "gpu-codex-runtime.json")
     run(provider_check_command(settings, args.campaign / "gpu-provider-check.json"), env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
          "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
@@ -524,13 +539,15 @@ def worker(args):
     spec = settings["spec"]
     if args.task not in spec["tasks"] or args.mode not in spec["modes"]:
         raise ValueError("Unregistered task/mode")
-    env = environment(settings)
     output = args.campaign / "tasks" / args.task / args.mode
     output.mkdir(parents=True, exist_ok=True)
     if (output / "run-info.json").exists() and not args.resume_run:
         raise RuntimeError("Existing run found; automatic restarting/re-budgeting is prohibited")
     try:
-        verify_codex(settings, output / "segments" / f"{os.environ['SLURM_JOB_ID']}-codex-runtime.json")
+        codex_runtime = verify_codex(
+            settings, output / "segments" / f"{os.environ['SLURM_JOB_ID']}-codex-runtime.json",
+            reference=args.campaign / "gpu-codex-runtime.json")
+        env = environment(settings, codex_runtime["binary"])
         import torch
         if torch.cuda.device_count() != 1:
             raise RuntimeError("Each run requires exactly one Slurm-visible GPU")

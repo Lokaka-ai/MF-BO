@@ -65,6 +65,13 @@ def source_hashes():
 
 def environment(settings, codex_bin=None):
     env = dict(os.environ)
+    # Noninteractive SSH does not necessarily load ~/.bashrc. Resolve project
+    # Python and user-installed utilities identically in prep and workers.
+    paths = [str(PYTHON.parent), str(Path.home() / ".local/bin")]
+    if codex_bin is not None:
+        paths.append(str(Path(codex_bin).parent))
+    paths.extend(env.get("PATH", os.defpath).split(os.pathsep))
+    env["PATH"] = os.pathsep.join(dict.fromkeys(p for p in paths if p))
     env.update(OPENCODE_API_KEY_FILE=settings["key_file"], MLEVOLVE_OPENCODE_REASONING_EFFORT="high",
                MLEVOLVE_MF_RECOVERY="1",
                MLEVOLVE_CODEX_REASONING_EFFORT="high", MLEVOLVE_OPENCODE_TIMEOUT_SECONDS="1800",
@@ -224,7 +231,9 @@ def prepare(args):
     settings = read(args.campaign / "settings.json")
     if settings["source"] != source_hashes():
         raise RuntimeError("Campaign source changed")
-    missing = [name for name in ("uv", "git", "unzip", "7z", "ffmpeg") if not shutil.which(name)]
+    env = environment(settings)
+    missing = [name for name in ("uv", "git", "unzip", "7z", "ffmpeg")
+               if not shutil.which(name, path=env["PATH"])]
     codex = (os.environ.get("MLEVOLVE_REAL_CODEX_BIN") or shutil.which("codex") or
              str(Path.home() / ".local/bin/codex"))
     if not codex or not Path(codex).is_file():
@@ -232,8 +241,8 @@ def prepare(args):
     if missing:
         raise RuntimeError("Load/install prerequisites before preparation: " + ", ".join(missing))
     codex_runtime = verify_codex(settings, args.campaign / "codex-runtime.json")
-    run(["git", "lfs", "version"])
     env = environment(settings, codex_runtime["binary"])
+    run(["git", "lfs", "version"], env=env)
     run(["bash", "tasks/mlebench_lite/setup.sh"], env=env)
     spec = settings["spec"]
     leaderboards = verify_leaderboards(spec["tasks"])

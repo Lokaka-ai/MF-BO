@@ -33,6 +33,25 @@ class CampaignTests(unittest.TestCase):
             campaign.main(modes=("carry_over", "reset"), default_campaign=self.path / "pilot")
         self.assertEqual(submit.call_args.args[0].protocol_source, source)
 
+    def test_worker_tools_resolve_with_noninteractive_path(self):
+        home = self.path / "home"
+        python = self.path / "venv/bin/python"
+        ffmpeg = home / ".local/bin/ffmpeg"
+        for executable in (python, ffmpeg):
+            executable.parent.mkdir(parents=True, exist_ok=True)
+            executable.write_text("#!/bin/sh\nprintf 'fixture-tool-ok\\n'\n")
+            executable.chmod(0o755)
+        settings = {**self.settings, "key_file": "/key"}
+        with patch.dict(os.environ, {"PATH": "/usr/bin:/bin"}), \
+             patch.object(campaign.Path, "home", return_value=home), \
+             patch.object(campaign, "PYTHON", python):
+            env = campaign.environment(settings, home / ".local/bin/codex")
+            self.assertEqual(campaign.shutil.which("python", path=env["PATH"]), str(python))
+            self.assertEqual(campaign.shutil.which("ffmpeg", path=env["PATH"]), str(ffmpeg))
+            self.assertEqual(subprocess.check_output(["ffmpeg"], env=env, text=True).strip(),
+                             "fixture-tool-ok")
+            self.assertEqual(os.environ["PATH"], "/usr/bin:/bin")
+
     def test_baseline_script_registers_protocol_without_pythonpath(self):
         task = "aerial-cactus-identification"
         source = self.path / "frozen protocols"
@@ -170,7 +189,7 @@ class CampaignTests(unittest.TestCase):
              patch.object(campaign, "source_hashes", return_value=settings["source"]), \
              patch.object(campaign, "verify_codex"), \
              patch.object(campaign, "verify_leaderboards", return_value={task: {"sha256": "x", "rows": 2}}), \
-             patch.object(campaign, "environment", return_value={}), \
+             patch.object(campaign, "environment", return_value={"PATH": "/usr/bin:/bin"}), \
              patch.object(campaign.shutil, "which", return_value="/usr/bin/true"), \
              patch.object(campaign, "run"):
             campaign.prepare(SimpleNamespace(campaign=destination))

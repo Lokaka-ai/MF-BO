@@ -5,12 +5,17 @@ MLE-bench commit `507f92e1138bb6e40dac5c6ee7a6758e6424bf97`, then exercise the
 native MLEvolve workflow. Datasets, run results and local setup records are not
 included in Git.
 
-For the intended AQ04 + redesigned-evolution comparison, prepare one frozen
-protocol with `prepare_fixed_protocol.py`, inspect its split and metric, and use
-`run_bo.py --protocol-dir ... --check-only` before launching. The command and
-evaluation boundary are documented in the repository's top-level `README.md`.
-The short `smoke.py` below exercises the inherited workflow with fixed outer
-evaluation disabled; its output is not a benchmark result for this system.
+## Current campaign versus historical tools
+
+The active 20% MF-GP campaign uses `mila_mfgp20.py` and
+`config/mlebench_mfgp20.json`. Start from the root [README](../../README.md) and
+[current specification](../../docs/MFGP20.md). The `run_bo.py` default remains a
+legacy AQ04/redesign route; it is not the current campaign launcher.
+
+The utility commands below document environment/data preparation and historical
+smoke workflows. In particular, `smoke.py` disables fixed outer evaluation and
+its output is not a benchmark result for the current system. Cluster work must
+run through allocated jobs and the campaign gates, not heavy login-node commands.
 
 ## Environment and data
 

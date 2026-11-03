@@ -1,8 +1,9 @@
 # Approved 20% MF-GP development scope
 
 This checkout branches from frozen pilot commit 315687813e501695ac249046779016965ede0d6b.
-The prior source repository and campaign manifests are preserved. No cluster jobs
-were launched for this change.
+The prior source repository and campaign manifests are preserved. The initial
+implementation was verified locally before the later cluster preparations.
+Use external operational receipts and live Slurm evidence for current status.
 
 ## Task and fidelity contract
 

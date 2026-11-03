@@ -1,81 +1,52 @@
-# BO Evolve — ML-E Bench Lite, redesigned evolution (2026-10-21)
+# Multi Fidelity BO
 
-This independent source repository packages Xixian's MLEvolve-based Bayesian
-optimization engine from `ZeroKnighting/EvolveFold` `xixian/dev` at `ced7bb5a54e91e3ea6236b871f9fcd27027fb493`,
-including his AQ04 selector and fixed ML evaluation. The sole added search
-operation is our evidence-guided redesigned evolution. An optional two-stage
-training view uses a fixed random half of T before switching to full T.
+Active research: budget-aware Bayesian optimization for MLE-bench Lite, using
+20% training data for low fidelity and 100% for target fidelity. The fixed outer
+validation set is unchanged. This is the maintained successor to the historical
+50% pilots, not a claim of equivalence to Xixian's latest upstream branch.
 
-The retained workflow includes draft, improve, debug, review, fusion,
-aggregation, memory and submission. MLEVHarness determines the legal operation
-for each parent before AQ04 BO selects among the prepared parent options. The
-selected `audited_bo=redesign` route uses the plateau trigger and produces a
-structural replacement plan from completed host-scored attempts. It generates
-a complete new program rather than patching the parent. ML-E Bench Lite uses
-`agents/mle_redesign_agent.py`; shared planning helpers remain in
-`agents/redesign_agent.py`. The original upstream README is preserved in
-`docs/UPSTREAM_README.md`.
+## Start here
 
-The AQ04 selection rule remains the upstream rule. The optional reset mode
-filters its GP training rows to full/full transitions after the switch. The
-redesign flag changes evolution and its stagnation trigger; it does not replace
-AQ04's parent-selection policy. The inherited AlphaEvolve
-package is not the target of this repository's testing; its upstream default
-is unchanged.
+1. [Project scope and scientific contract](PROJECT.md)
+2. [Maintainer instructions](AGENTS.md)
+3. [Current experiment specification](docs/MFGP20.md)
+4. [Code map and debugging guide](docs/DEVELOPMENT.md)
+5. [Documentation index and historical evidence](docs/README.md)
 
-## ML-E Bench Lite use
+## Authoritative entry points
 
-Prepare the pinned environment and task data using
-`tasks/mlebench_lite/README.md`. Create and inspect a fixed evaluation
-protocol separately before a long search:
+| Purpose | Entry point |
+|---|---|
+| Current 20% MF-GP campaign | `tasks/mlebench_lite/mila_mfgp20.py` |
+| Current task/resources/model settings | `config/mlebench_mfgp20.json` |
+| Shared prepare/preflight/submit/resume/grade logic | `tasks/mlebench_lite/mila_multifidelity.py` |
+| MF-GP search loop | `engine/mf_gp/runner.py` |
+| Surrogate and acquisition | `engine/mf_gp/model.py`, `engine/mf_gp/controller.py` |
+| Frozen evaluator and data views | `engine/fixed_evaluation.py`, `engine/multifidelity.py` |
+| Measured cost export | `tools/mfgp_cost_matrix.py` |
+
+Inspect CLI options without launching anything:
 
 ```bash
-bash tasks/mlebench_lite/setup.sh
-source tasks/mlebench_lite/env.sh
-python tasks/mlebench_lite/prepare_fixed_protocol.py \
-  --task leaf-classification --data-root "$MLEBENCH_DATA" \
-  --output-root "$PWD/runs/protocol_setup" --seed 42
+python3 tasks/mlebench_lite/mila_mfgp20.py --help
 ```
 
-The protocol preparation may call the configured LLM, but it does not launch
-BO search or candidate training. Review its T/V split, metric, targets and
-asset paths for the task. Then inspect the intended AQ04 + redesign command
-without running it:
+The new campaign uses MF-GP only. Legacy `mila_mfgp.py` and
+`mila_multifidelity.py` launchers retain their 50% configurations. Do not infer
+the active campaign from global defaults or invoke a legacy launcher by accident.
+Preparation, GPU checks, task-boundary checks, and explicit run authorization
+precede full searches. A successful synthetic test suite is not an experiment.
 
-```bash
-python tasks/mlebench_lite/run_bo.py \
-  --task leaf-classification --data-root "$MLEBENCH_DATA" \
-  --output-root "$PWD/runs/bo_redesign" \
-  --protocol-dir "$PROTOCOL_DIR" --check-only
-```
+## Repository boundaries
 
-When a run is authorized, remove `--check-only`. The launcher verifies that
-the protocol matches the prepared task and seed. It defaults to 12 hours and
-500 steps; record any overrides alongside the task, model, worker count and
-seed. The configured model/provider is Muse Spark 1.3 through OpenCode.
-Only full host-scored V results enter AQ04 BO and choose the final submission.
-The private test score is obtained after search and is never BO feedback.
+Keep runtime code, prompts, fixtures, pinned dependencies, and compatibility
+launchers together: inherited modules may remain on the active call path.
+Historical runbooks are references, not instructions to launch old campaigns.
+Credentials, environments, datasets, logs, and experiment outputs are excluded
+from source bundles. Frozen cluster bundles must never be patched in place by
+local housekeeping changes.
 
-For a two-stage run, add `--multifidelity-mode carry_over` or
-`--multifidelity-mode reset` to the same launcher command. Both modes use one
-seeded, uniform sample of floor(50% of T), with unchanged full V/test. At 40%
-of the total time budget, the scheduler drains submitted cheap work and then
-switches the training view to full T. Carry over keeps the AQ04 fit. Reset
-refits AQ04 only on full/full parent-child transitions; cheap nodes remain in
-the search population. Only full-trained nodes can win. If no valid full node
-finishes within the budget, finalization fails rather than selecting a cheap
-node. Use separate output directories for the two modes and baseline.
-
-## Evidence and execution boundary
-
-This package has not established a performance advantage on ML-E Bench Lite.
-No benchmark run was launched when creating it. A valid comparison requires
-matched task, model, protocol, time budget, resources and independent runs.
-An interrupted or infrastructure-failed run is incomplete evidence.
-
-The fixed evaluator's candidate programs currently execute as subprocesses
-under the same Unix user. The input view is a cooperative contract, not a
-filesystem security boundary. Before claiming a leakage-free benchmark result,
-use cluster-verified filesystem isolation or independently audit each executed
-program and its file access. Inspect the prepared protocol itself; structural
-validation cannot establish that every task's target and metric are correct.
+Fixed evaluation uses a cooperative data contract; candidate filesystem isolation
+is not enforced. Review executed programs before making leakage-free claims.
+A matched full-only baseline and stochastic replicates are needed for causal
+performance claims; historical scores alone do not establish superiority.

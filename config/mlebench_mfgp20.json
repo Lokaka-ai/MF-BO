@@ -36,12 +36,17 @@
       "memory_gb": 64,
       "source": "owner"
     },
-    "ranzcr-clip-catheter-line-classification": {
-      "cpus": 4,
-      "memory_gb": 24,
-      "source": "owner"
+    "siim-isic-melanoma-classification": {
+      "cpus": 21,
+      "memory_gb": 128,
+      "source": "collaborator"
+    },
+    "dog-breed-identification": {
+      "cpus": 21,
+      "memory_gb": 128,
+      "source": "collaborator"
     }
   },
   "codex_version": "0.164.0",
-  "purpose": "RANZCR development; Jigsaw next comparison; no automatic submission"
+  "purpose": "Approved three-task 20%/100% MF-GP campaign; preparation and GPU validation required before full search"
 }

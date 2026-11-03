@@ -131,8 +131,9 @@ def test_new_launcher_preserves_legacy_specs(tmp_path):
     old = json.loads((ROOT / "config/mlebench_mfgp14.json").read_text())
     new = json.loads((ROOT / "config/mlebench_mfgp20.json").read_text())
     assert old["training_fraction"] == 0.5 and new["training_fraction"] == 0.2
-    assert len(old["tasks"]) == 14 and len(new["tasks"]) == 2
-    task = "ranzcr-clip-catheter-line-classification"
+    assert len(old["tasks"]) == 14
+    assert set(new["tasks"]) == {"jigsaw-toxic-comment-classification-challenge", "siim-isic-melanoma-classification", "dog-breed-identification"}
+    task = "jigsaw-toxic-comment-classification-challenge"
     command = search_command({"spec": new, "data_dir": "/data"}, tmp_path, task, "mf_gp")
     assert "evaluation.mf_gp_low_fraction=0.2" in command
 

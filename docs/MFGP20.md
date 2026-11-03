@@ -6,9 +6,12 @@ were launched for this change.
 
 ## Task and fidelity contract
 
-- RANZCR: development, 4 CPU / 24 GiB host memory / one A100 80 GB.
+- Selected next campaign: Jigsaw, SIIM-ISIC Melanoma, Dog Breed Identification.
+- Melanoma and Dog Breed: 21 CPU / 128 GiB host memory / one A100 80 GB,
+  from the collaborator runbook (not verified completed owner allocations).
+- RANZCR remains prior development evidence; excluded from this new campaign.
 - Jigsaw Toxic Comments: next comparison, 4 CPU / 64 GiB / one A100 80 GB.
-  These are the respective historical owner allocations; Jigsaw was not 24 GiB.
+  Jigsaw uses the historical owner allocation; it was not 24 GiB.
 - New launcher: `python tasks/mlebench_lite/mila_mfgp20.py --help`.
 - New manifest: `config/mlebench_mfgp20.json`; default campaign `runs/mf20_gp`.
 - Low training fraction 0.20; target 1.00. The existing MF-GP manifest/launcher

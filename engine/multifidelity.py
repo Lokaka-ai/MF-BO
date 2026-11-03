@@ -20,7 +20,8 @@ def cheap_execution_seconds_left(mode, phase, node, start_time, time_limit, now)
     MF-GP is adaptive, so only its mandatory initial cheap drafts use this
     deadline; later controller-selected cheap actions retain their own guard.
     """
-    if getattr(node, "training_fraction", None) != 0.5:
+    fraction = getattr(node, "training_fraction", None)
+    if (mode == "mf_gp" and fraction not in (0.1, 0.2, 0.5)) or (mode != "mf_gp" and fraction != 0.5):
         return None
     if mode in MODES and phase == "half":
         pass
@@ -69,12 +70,14 @@ def file_hash(path):
     return digest.hexdigest()
 
 
-def prepare_view(protocol_dir, workspace, seed):
+def prepare_view(protocol_dir, workspace, seed, fraction=0.5):
     """Sample IDs uniformly once; preserve original CSV order and all V/test rows."""
+    from engine.mf_gp.settings import validate_low_fraction
+    fraction = validate_low_fraction(fraction)
     csv.field_size_limit(sys.maxsize)
     protocol_dir, workspace = Path(protocol_dir), Path(workspace)
     source = protocol_dir / "public"
-    view = workspace / "input_half"
+    view = workspace / ("input_half" if fraction == 0.5 else f"input_fraction_{fraction}")
     manifest_path = workspace / "multifidelity_subset.json"
     with (source / "train.csv").open(newline="", encoding="utf-8") as stream:
         reader = csv.DictReader(stream)
@@ -83,12 +86,26 @@ def prepare_view(protocol_dir, workspace, seed):
         ids = [row["sample_id"] for row in reader]
     if len(ids) < 2 or len(ids) != len(set(ids)) or any(not key for key in ids):
         raise ValueError("Frozen T requires at least two unique, nonempty sample IDs")
-    chosen = set(random.Random(seed).sample(ids, len(ids) // 2))
+    # Preserve legacy 50% subset byte-for-byte. New fractions use prefixes of
+    # one shuffled order, giving nested 10%/20% views without reselection.
+    if fraction == 0.5:
+        chosen = set(random.Random(seed).sample(ids, len(ids) // 2))
+    else:
+        count = math.floor(len(ids) * fraction)
+        if count < 1:
+            raise ValueError("Low-fidelity training subset would be empty")
+        ordered = random.Random(seed).sample(ids, len(ids) // 2)
+        chosen = set(ordered[:count])
     training_ids = set(ids)
     expected = {"source_sha256": file_hash(source / "train.csv"), "seed": seed,
                 "n_total": len(ids), "n_selected": len(chosen),
                 "selected_ids_sha256": hashlib.sha256(json.dumps(sorted(chosen)).encode()).hexdigest()}
+    if fraction != 0.5:
+        expected.update(training_fraction=fraction, sampling="legacy_half_prefix_v1")
     if manifest_path.exists():
+        # A legacy 50% caller must also reject a new fraction manifest.
+        if json.loads(manifest_path.read_text()).get("training_fraction", 0.5) != fraction:
+            raise ValueError("Frozen training fraction changed on resume")
         saved = json.loads(manifest_path.read_text())
         if any(saved.get(key) != value for key, value in expected.items()):
             raise ValueError("Frozen half-training sample changed on resume")

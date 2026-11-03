@@ -59,7 +59,7 @@ class MFEvaluation(FixedEvaluation):
 
     def candidate_contract(self):
         return super().candidate_contract() + (
-            "\nThe host may execute this SAME saved program with a fixed 50% or 100% T view. "
+            f"\nThe host may execute this SAME saved program with a fixed {self.low_fraction:.0%} or 100% T view. "
             "Design the pipeline for the full task; use only the supplied ./input view. "
             "Keep training rules and seeds in the executable. Fidelity-tagged score "
             "differences alone do not demonstrate a code improvement.\n"
@@ -67,20 +67,25 @@ class MFEvaluation(FixedEvaluation):
 
     def begin_attempt(self, node, remaining_seconds):
         fraction = getattr(node, "training_fraction", None)
-        if fraction not in (0.5, 1.0):
+        if fraction not in (self.low_fraction, 1.0):
             raise EvaluationError("MF execution has no reserved fidelity")
         context = super().begin_attempt(node, remaining_seconds)
         node.training_fraction = fraction  # base's global-phase value is inactive
         work = Path(context["output_dir"]) / "work"
         work.mkdir()
         (work / "input").symlink_to(
-            self.half_view if fraction == 0.5 else self.directory / "public",
+            self.half_view if fraction == self.low_fraction else self.directory / "public",
             target_is_directory=True,
         )
         for name in ("working", "submission"):
             (work / name).mkdir()
         context["working_dir"] = str(work)
         context["training_fraction"] = fraction
+        context["attempt_id"] = node.evaluation_attempt_id
+        mf = (getattr(node, "phase1_selection_features", None) or {}).get("mf", {})
+        context["estimated_action_seconds"] = mf.get("estimated_action_seconds")
+        context["cost_estimate_scope"] = mf.get("cost_estimate_scope")
+        context["protocol_id"] = self.protocol_id
         context["mf_preserve_future_imports"] = True
         return context
 
@@ -91,7 +96,15 @@ class MFEvaluation(FixedEvaluation):
             destination = Path(self.cfg.workspace_dir) / "submission" / source.name
             shutil.copyfile(source, destination)
         # Host scorer snapshots the submission before the next attempt may run.
-        return super().score(node)
+        started = time.monotonic()
+        result = super().score(node)
+        _write_json(Path(node.evaluation_output_dir) / "host_cost.json", dict(
+            program_id=node.id, attempt_id=node.evaluation_attempt_id,
+            fidelity=node.training_fraction, protocol_id=self.protocol_id,
+            host_score_seconds=time.monotonic() - started,
+            valid=bool(result.get("valid")),
+        ))
+        return result
 
 
 def promote(agent, ticket, exec_callback):
@@ -109,6 +122,8 @@ def promote(agent, ticket, exec_callback):
         if remaining <= 0:
             raise EvaluationError("Cannot start promotion after the deadline")
         context = agent.fixed_evaluation.begin_attempt(node, remaining)
+        context["estimated_action_seconds"] = reservation["cost"]
+        context["cost_estimate_scope"] = "execution_only"
         selector.pending_promotions[ticket]["attempt_id"] = node.evaluation_attempt_id
         runtime._persist_root_state(agent)
     started = time.perf_counter()

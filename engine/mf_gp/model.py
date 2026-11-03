@@ -43,7 +43,12 @@ def digest(value):
 
 
 class MultiFidelityGP:
-    def __init__(self):
+    def __init__(self, low_fraction=0.5):
+        from engine.mf_gp.settings import validate_low_fraction
+        self.low_fraction = validate_low_fraction(low_fraction)
+        self.contract = dict(CONTRACT)
+        if self.low_fraction != 0.5:
+            self.contract.update(version=2, low_fraction=self.low_fraction)
         self.rows, self.values = [], np.empty(0)
         self.center, self.scale = 0.0, 1.0
         self.reference_frozen = False
@@ -107,7 +112,7 @@ class MultiFidelityGP:
             r for r in observations if r.get("valid") and r.get("budget_eligible", True)
         ]
         if any(
-            not math.isfinite(r["utility"]) or r["fidelity"] not in (0.5, 1.0)
+            not math.isfinite(r["utility"]) or r["fidelity"] not in (self.low_fraction, 1.0)
             for r in admitted
         ):
             raise ValueError("Invalid MF observation")
@@ -117,7 +122,7 @@ class MultiFidelityGP:
                 self.center = float(np.median(y))
                 self.scale = max(float(np.ptp(y)), 0.05 * abs(self.center), 1e-6)
                 self.reference_frozen = True
-        signature = digest([admitted, self.center, self.scale, CONTRACT])
+        signature = digest([admitted, self.center, self.scale, self.contract])
         if signature == self.training_hash:
             return False
         self.rows = [
@@ -231,14 +236,14 @@ class MultiFidelityGP:
             reference_frozen=self.reference_frozen,
             center=self.center,
             scale=self.scale,
-            contract=CONTRACT,
+            contract=self.contract,
             theta=self.theta.tolist(),
             training_hash=self.training_hash,
             diagnostics=self.fit_diagnostics,
         )
 
     def load_state_dict(self, state):
-        if state["contract"] != CONTRACT:
+        if state["contract"] != self.contract:
             raise ValueError("MF model contract changed on resume")
         self.reference_frozen = state["reference_frozen"]
         self.center, self.scale = state["center"], state["scale"]

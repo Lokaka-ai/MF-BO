@@ -251,7 +251,7 @@ def prepare(args):
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
          "tests/test_mila_failure_regressions.py", "tests/test_mila_leaderboard.py",
          "tests/test_go_campaign.py", "tests/test_codex_retry.py", "tests/test_kaggle_download.py",
-         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
     run(provider_check_command(settings, args.campaign / "provider-check.json"), env=env)
@@ -356,7 +356,7 @@ def preflight(args):
     run(provider_check_command(settings, args.campaign / "gpu-provider-check.json"), env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
          "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
-         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     save(args.campaign / "gpu-ready.json", {
         "settings_sha256": sha(args.campaign / "settings.json"),
         "job_id": os.environ["SLURM_JOB_ID"], "gpu": props.name,
@@ -374,6 +374,7 @@ def search_command(settings, campaign, task, mode, python=PYTHON):
         f"log_dir={output / 'runs'}", f"workspace_dir={output / 'runs'}",
         f"run_result_file={output / 'run-info.json'}", "experiment_preset=acq7_aq05_gp4_level15_rating_kg",
         "audited_bo=redesign", "evaluation.enabled=true", f"evaluation.multifidelity_mode={mode}",
+        *([f"evaluation.mf_gp_low_fraction={spec['training_fraction']}"] if mode == "mf_gp" else []),
         f"evaluation.protocol_dir={campaign / 'protocols' / task}",
         f"agent.time_limit={spec['time_limit_seconds']}", f"agent.steps={spec['steps']}",
         f"agent.initial_drafts={spec['initial_drafts']}", f"agent.seed={spec['seed']}",
@@ -441,7 +442,13 @@ def reconcile_recovery(output, recovery):
     for path in (logs / "mf_execution").glob("*.json"):
         record = read(path)
         if record["state"] == "running":
-            record["elapsed_seconds"] += max(0., recovery["ended_epoch"] - record["started_epoch"])
+            interrupted_seconds = max(0., recovery["ended_epoch"] - record["started_epoch"])
+            record["elapsed_seconds"] += interrupted_seconds
+            attempts = record.get("attempts", [])
+            if attempts and attempts[-1]["state"] == "running":
+                attempts[-1].update(state="interrupted", elapsed_seconds=interrupted_seconds,
+                    ended_epoch=recovery["ended_epoch"], completed_runtime_observation=False,
+                    runtime_lower_bound=True, measurement="release_bounded_wall_seconds")
             record["state"] = "interrupted"
             save(path, record)
 

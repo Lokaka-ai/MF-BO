@@ -405,12 +405,16 @@ class FixedEvaluation:
         is_resume = bool(journal.nodes)
         state = getattr(journal, "evaluation_state", None)
         mode = getattr(cfg.evaluation, "multifidelity_mode", None)
+        from engine.mf_gp.settings import low_fraction
+        cheap_fraction = low_fraction(cfg)
         if mode is not None and (mode not in getattr(cls, "allowed_modes", MODES) or not cfg.evaluation.enabled
                                  or str(cfg.parent_selector.type) != "acq7_gp4"
                                  or str(cfg.study7.method_id) not in {"AQ04", "AQ05"}):
             raise EvaluationError("Multi-fidelity requires fixed evaluation and AQ04/AQ05; choose carry_over or reset")
         if state and state.get("multifidelity_mode") != mode:
             raise EvaluationError("Resume multi-fidelity mode differs from admitted journal")
+        if state and mode and (state.get("multifidelity_subset") or {}).get("training_fraction", 0.5) != cheap_fraction:
+            raise EvaluationError("Resume training fraction differs from admitted journal")
         if is_resume and not state:
             raise EvaluationError("Cannot add fixed evaluation to a legacy checkpoint; start a new search")
         if state and state.get("failure"):
@@ -453,7 +457,7 @@ class FixedEvaluation:
                     result = node.evaluation_result or {}
                     if not result.get("valid") or result.get("metric") != node.metric.value or node.metric.maximize != spec["metric"]["maximize"]:
                         raise EvaluationError("Checkpoint metric is not the admitted evaluator result")
-                    if mode and (node.training_fraction not in (0.5, 1.0)
+                    if mode and (node.training_fraction not in (cheap_fraction, 1.0)
                                  or result.get("training_fraction") != node.training_fraction):
                         raise EvaluationError("Checkpoint lacks matching training-fidelity provenance")
             # The managed runtime can recover nodes newer than journal.json.
@@ -477,11 +481,12 @@ class FixedEvaluation:
                             result = node.get("evaluation_result") or {}
                             if node.get("evaluation_protocol_id") != instance.protocol_id or not result.get("valid") or result.get("metric") != record["child_metric_raw"]:
                                 raise EvaluationError("Transition history lacks the matching fixed evaluator result")
-                            if mode and (node.get("training_fraction") not in (0.5, 1.0)
+                            if mode and (node.get("training_fraction") not in (cheap_fraction, 1.0)
                                          or result.get("training_fraction") != node.get("training_fraction")):
                                 raise EvaluationError("Transition history lacks training-fidelity provenance")
         journal.evaluation_state = {**(state or {}), "protocol_dir": str(directory), "protocol_id": instance.protocol_id,
                                     "setup_cost_seconds": spec["setup_cost_seconds"], "load_wall_seconds": elapsed}
+        instance.low_fraction = cheap_fraction
         instance.multifidelity_mode = mode
         instance.multifidelity_phase = (state or {}).get("multifidelity_phase", "half") if mode else None
         if mode:
@@ -496,7 +501,7 @@ class FixedEvaluation:
                 instance.multifidelity_phase = "full"
             elif instance.multifidelity_phase == "full":
                 raise EvaluationError("Full-training checkpoint is missing its switch marker")
-            view, manifest = prepare_view(directory, cfg.workspace_dir, int(cfg.agent.seed))
+            view, manifest = prepare_view(directory, cfg.workspace_dir, int(cfg.agent.seed), fraction=cheap_fraction)
             if state and state.get("multifidelity_subset") != manifest:
                 raise EvaluationError("Resume half-training sample differs from admitted journal")
             journal.evaluation_state.update(multifidelity_mode=mode,

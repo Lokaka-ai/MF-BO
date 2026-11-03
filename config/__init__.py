@@ -254,6 +254,7 @@ class EvaluationConfig:
     enabled: bool = False
     protocol_dir: str | None = None
     multifidelity_mode: str | None = None
+    mf_gp_low_fraction: float = 0.5  # Legacy default; new campaign explicitly uses 0.2.
     setup_timeout_seconds: float = 900
     setup_max_attempts: int = 0  # 0: repair until success or the setup deadline.
     score_timeout_seconds: float = 120

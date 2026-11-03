@@ -37,13 +37,14 @@ class MFSelector:
     greedy = False
     full_training_only = False
 
-    def __init__(self, config, records_provider, selection_logger):
+    def __init__(self, config, records_provider, selection_logger, low_fraction=0.5):
         self.config, self.records_provider, self.logger = (
             config,
             records_provider,
             selection_logger,
         )
-        self.gp = MultiFidelityGP()
+        self.gp = MultiFidelityGP(low_fraction)
+        self.low_fraction = self.gp.low_fraction
         self.observations = []
         self.programs = {}
         self.seen = set()
@@ -57,7 +58,7 @@ class MFSelector:
         return dict(
             mode="mf_gp",
             schema="mf_gp_v1",
-            model=CONTRACT,
+            model=self.gp.contract,
             native=asdict(self.config),
             initialization="best_plus_seeded_random",
         )
@@ -73,9 +74,9 @@ class MFSelector:
                 x = mf.get("x", [0.0] * 8)
                 operator = mf.get("operator", r.operator)
                 fidelity = node.get("training_fraction")
-                if fidelity not in (0.5, 1.0):
+                if fidelity not in (self.low_fraction, 1.0):
                     # A failed generation has no measurement; retain its cost.
-                    fidelity = mf.get("fidelity", 0.5)
+                    fidelity = mf.get("fidelity", self.low_fraction)
                 program = dict(
                     program_id=r.child_node_id,
                     x=x,
@@ -115,7 +116,7 @@ class MFSelector:
                         valid=False,
                         utility=None,
                         fidelity=r.selection_features.get("mf", {}).get(
-                            "fidelity", 0.5
+                            "fidelity", self.low_fraction
                         ),
                         generation_seconds=r.generation_wall_time_sec,
                         execution_seconds=0.0,
@@ -131,7 +132,7 @@ class MFSelector:
             o["utility"]
             for o in self.observations
             if o["valid"]
-            and o["fidelity"] == 0.5
+            and o["fidelity"] == self.low_fraction
             and self.programs[o["program_id"]]["initial"]
         ]
         changed = self.gp.fit(self.observations, initial if freeze else None)
@@ -156,7 +157,7 @@ class MFSelector:
         own = [o for o in valid if o["program_id"] == parent.id]
         chosen = max(own, key=lambda o: o["fidelity"]) if own else None
         fidelity = (
-            chosen["fidelity"] if chosen else getattr(parent, "training_fraction", 0.5)
+            chosen["fidelity"] if chosen else getattr(parent, "training_fraction", self.low_fraction)
         )
         utility = chosen["utility"] if chosen else 0.0
         parent_id = parent.parent.id if parent.parent else None
@@ -207,7 +208,7 @@ class MFSelector:
 
     def costs(self, program_id=None, operator=None):
         measured = [o for o in self.observations if o["execution_seconds"] > 0]
-        low = [o["execution_seconds"] for o in measured if o["fidelity"] == 0.5]
+        low = [o["execution_seconds"] for o in measured if o["fidelity"] == self.low_fraction]
         high = [o["execution_seconds"] for o in measured if o["fidelity"] == 1.0]
         ratios = []
         for p in self.programs:
@@ -215,7 +216,7 @@ class MFSelector:
                 (
                     o["execution_seconds"]
                     for o in measured
-                    if o["program_id"] == p and o["fidelity"] == 0.5
+                    if o["program_id"] == p and o["fidelity"] == self.low_fraction
                 ),
                 None,
             )
@@ -234,7 +235,7 @@ class MFSelector:
             (
                 o["execution_seconds"]
                 for o in measured
-                if o["program_id"] == program_id and o["fidelity"] == 0.5
+                if o["program_id"] == program_id and o["fidelity"] == self.low_fraction
             ),
             None,
         )
@@ -304,7 +305,7 @@ class MFSelector:
                 o["program_id"] == p
                 and o["valid"]
                 and o.get("budget_eligible", True)
-                and o["fidelity"] == 0.5
+                and o["fidelity"] == self.low_fraction
                 for o in self.observations
             )
         ]
@@ -320,7 +321,7 @@ class MFSelector:
                 low_score = {
                     o["program_id"]: o["utility"]
                     for o in self.observations
-                    if o["valid"] and o["fidelity"] == 0.5
+                    if o["valid"] and o["fidelity"] == self.low_fraction
                 }
                 best = max(initial, key=lambda p: (low_score[p], p))
                 others = sorted(p for p in initial if p != best)
@@ -368,7 +369,7 @@ class MFSelector:
                 actions.append(
                     dict(
                         kind="expand",
-                        row={**row, "fidelity": 0.5},
+                        row={**row, "fidelity": self.low_fraction},
                         cost=cheap + generation,
                         guard=1.5 * (cheap + generation) + guard,
                         option_index=index,
@@ -431,6 +432,8 @@ class MFSelector:
             raise PromotionRequested(ticket)
         option = options[action["option_index"]]
         mf = copy.deepcopy(action["row"])
+        mf["estimated_action_seconds"] = action["cost"]
+        mf["cost_estimate_scope"] = "generation_plus_execution"
         mf["program_id"] = "fresh:" + ticket
         option = replace(option, state_features={**option.state_features, "mf": mf})
         decision = SelectionDecision(
@@ -466,9 +469,9 @@ class MFSelector:
             # NEW executable and inherits the failed attempt's fidelity.
             parent = option.parent_node
             fidelity = (
-                0.5
+                self.low_fraction
                 if option.operator == "draft"
-                else (getattr(parent, "training_fraction", None) or 0.5)
+                else (getattr(parent, "training_fraction", None) or self.low_fraction)
             )
             if self.terminal:
                 fidelity = 1.0
@@ -523,8 +526,10 @@ class MFRuntime(Phase1SelectorRuntime):
         super().__init__(cfg)
         if not self.acq7_enabled or self.study7_settings.method_id != "AQ05":
             raise ValueError("MF-GP requires the AQ05 native expansion workflow")
+        from engine.mf_gp.settings import low_fraction
         self.study7_selector = MFSelector(
-            self.study7_settings, self.transition_store.records, self.selection_logger
+            self.study7_settings, self.transition_store.records, self.selection_logger,
+            low_fraction=low_fraction(cfg)
         )
         self.surrogate = self.study7_selector.gp
         self.selectors[self.selector_type] = self.study7_selector
@@ -540,10 +545,10 @@ class MFRuntime(Phase1SelectorRuntime):
             fidelity = (
                 1.0
                 if selector.terminal
-                else (getattr(parent_node, "training_fraction", None) or 0.5)
+                else (getattr(parent_node, "training_fraction", None) or selector.low_fraction)
             )
             guard = 1.5 * generation + full_guard
-            if fidelity == 0.5:
+            if fidelity == selector.low_fraction:
                 guard += 1.5 * cheap
             if guard > remaining:
                 return selector.select(agent, self._normal_options(agent))
@@ -618,7 +623,7 @@ class MFRuntime(Phase1SelectorRuntime):
         if not options:
             has_cheap = any(
                 o["valid"]
-                and o["fidelity"] == 0.5
+                and o["fidelity"] == selector.low_fraction
                 and not any(
                     h["program_id"] == o["program_id"] and h["fidelity"] == 1.0
                     for h in selector.observations

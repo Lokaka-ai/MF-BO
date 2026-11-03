@@ -21,6 +21,7 @@ import sys
 import threading
 import time
 
+import requests
 import yaml
 
 ROOT = Path(__file__).resolve().parents[2]

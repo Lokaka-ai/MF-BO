@@ -105,3 +105,33 @@ def test_helper_uses_explicit_token_and_preserves_zip(monkeypatch, tmp_path):
     sys.modules["kaggle.api.kaggle_api_extended"].KaggleApi = API
     kaggle_download.download("task", tmp_path, token)
     assert calls == [(("task",), {"path": str(tmp_path), "quiet": True, "unzip": False})]
+
+
+@pytest.mark.parametrize("transport", [False, True])
+def test_main_records_download_failures(monkeypatch, fixture, transport):
+    import json
+    import sys
+    import requests
+    task, data, token, _ = fixture
+    root = prepare.ROOT
+    (root / "config").mkdir()
+    (root / "config/mlebench_lite22.txt").write_text(task)
+    split = prepare.UPSTREAM / "experiments/splits/low.txt"
+    split.parent.mkdir(parents=True)
+    split.write_text(task)
+    state = root / "state"
+    monkeypatch.setattr(prepare, "STATE", state)
+    monkeypatch.setattr(prepare.subprocess, "check_output", lambda *a, **kw: "frozen-commit")
+    monkeypatch.chdir(root)
+    def fail(*args):
+        if transport:
+            raise requests.RequestException("sensitive transport URL")
+        raise RuntimeError("KAGGLE_DOWNLOAD_ERROR: HTTP 403")
+    monkeypatch.setattr(prepare, "download", fail)
+    monkeypatch.setattr(sys, "argv", ["prepare.py", "--tasks", task, "--data-dir", str(data)])
+    with pytest.raises(SystemExit) as error:
+        prepare.main()
+    assert error.value.code == 1
+    record = json.loads((state / "prepare-status.json").read_text())["tasks"][task]
+    assert record["state"] == "failed"
+    assert record["error"] == ("Kaggle transport error: RequestException" if transport else "KAGGLE_DOWNLOAD_ERROR: HTTP 403")

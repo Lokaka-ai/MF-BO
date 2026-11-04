@@ -24,7 +24,8 @@
     "Contextual autoregressive MF-GP, adaptive cost-aware acquisition and immutable full-data promotions; original AQ05 kept as an experimental baseline.",
     "Codex CLI 0.164.0 pinned for all arms; historical CLI version unverified. Current documented Go Responses endpoint used.",
     "Mandatory initial low-data drafts stop at 40% of the active-time budget; full-data executions retain the nine-hour candidate cap.",
-    "New isolated 20%/100% campaign; frozen validation unchanged; execution attempt costs recorded."
+    "New isolated 20%/100% campaign; frozen validation unchanged; execution attempt costs recorded.",
+    "Policy v2: completed-runtime cost evidence, measured task cost prior, asynchronous calibration slots and exact-metric-ceiling stop."
   ],
   "resource_sources": {
     "owner": "docs/MLEBENCH_LITE_AQ05_OWNER_RUN_20260921_zh.md: recorded per-task allocations",
@@ -48,5 +49,6 @@
     }
   },
   "codex_version": "0.164.0",
-  "purpose": "Approved three-task 20%/100% MF-GP campaign; preparation and GPU validation required before full search"
+  "purpose": "Approved three-task 20%/100% MF-GP campaign; preparation and GPU validation required before full search",
+  "mf_gp_policy_version": 2
 }

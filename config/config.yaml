@@ -21,6 +21,8 @@ evaluation:
   enabled: false
   protocol_dir: null
   multifidelity_mode: null  # null, carry_over, reset, or mf_gp
+  mf_gp_policy_version: 1  # Legacy contract; new 20% campaign explicitly selects 2.
+  mf_gp_cost_profile: null  # Measured same-code pair receipt required by policy 2.
   mf_gp_low_fraction: 0.5  # Set explicitly to 0.2 in new MF-GP campaigns.
   setup_timeout_seconds: 900
   setup_max_attempts: 0  # 0: DEBUG repairs until success or the setup deadline.

@@ -28,10 +28,11 @@ Report official full-data winner scores, failures, missing outcomes, total costs
 and validation trajectories. Test scores are obtained only after winner selection.
 Historical Xixian comparisons have evaluation/generator/resource differences.
 
-The 20% runtime estimator retains the previous median/paired-ratio mechanism
-and initial ratio 2; that prior is not a universal calibrated scaling law.
-Task profiling measures particular programs, not all future agent programs.
-Any estimator redesign or extra experiment requires the appropriate approval.
+The approved 20% campaign uses scheduling policy v2: completed-runtime evidence,
+a measured same-code task cost prior, two asynchronous calibration slots, and
+exact-known-metric-ceiling stopping. A profile is a prior for one workload, not a
+runtime guarantee for future agent programs. Legacy manifests retain policy v1.
+See docs/MFGP_POLICY_V2.md for profiling and launch requirements.
 
 ## Preservation and operations
 

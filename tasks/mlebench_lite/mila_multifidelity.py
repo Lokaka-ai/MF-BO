@@ -251,7 +251,7 @@ def prepare(args):
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
          "tests/test_mila_failure_regressions.py", "tests/test_mila_leaderboard.py",
          "tests/test_go_campaign.py", "tests/test_codex_retry.py", "tests/test_kaggle_download.py",
-         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py", "tests/test_mfgp_policy_v2.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
     run(provider_check_command(settings, args.campaign / "provider-check.json"), env=env)
@@ -297,6 +297,21 @@ def validate_gpu_partition(partition, resources):
         )
 
 
+def validate_cost_profiles(campaign, settings, tasks):
+    spec = settings["spec"]
+    if spec.get("mf_gp_policy_version", 1) != 2:
+        return {}
+    from engine.mf_gp.policy import load_cost_prior
+    priors = {task: load_cost_prior(campaign / "cost_profiles" / (task + ".json"),
+                campaign / "protocols" / task, spec["training_fraction"]) for task in tasks}
+    frozen = campaign / "cost_profiles" / "submitted.json"
+    if frozen.exists():
+        previous = read(frozen)
+        if any(task in previous and previous[task] != prior for task, prior in priors.items()):
+            raise ValueError("Submitted cost prior changed; preserve the frozen campaign")
+    return priors
+
+
 def submit(args):
     settings = ready(args.campaign)
     gpu_ready = read(args.campaign / "gpu-ready.json")
@@ -311,6 +326,10 @@ def submit(args):
     for task in tasks:
         validate_gpu_partition(args.partition, spec["tasks"][task])
     with submission_lock(args.campaign):
+        priors = validate_cost_profiles(args.campaign, settings, tasks)
+        if priors:
+            frozen = args.campaign / "cost_profiles" / "submitted.json"
+            save(frozen, {**(read(frozen) if frozen.exists() else {}), **priors})
         for task in tasks:
             resources = spec["tasks"][task]
             for mode in spec["modes"]:
@@ -356,7 +375,7 @@ def preflight(args):
     run(provider_check_command(settings, args.campaign / "gpu-provider-check.json"), env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
          "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
-         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py", "tests/test_mfgp_policy_v2.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
     save(args.campaign / "gpu-ready.json", {
         "settings_sha256": sha(args.campaign / "settings.json"),
         "job_id": os.environ["SLURM_JOB_ID"], "gpu": props.name,
@@ -375,6 +394,9 @@ def search_command(settings, campaign, task, mode, python=PYTHON):
         f"run_result_file={output / 'run-info.json'}", "experiment_preset=acq7_aq05_gp4_level15_rating_kg",
         "audited_bo=redesign", "evaluation.enabled=true", f"evaluation.multifidelity_mode={mode}",
         *([f"evaluation.mf_gp_low_fraction={spec['training_fraction']}"] if mode == "mf_gp" else []),
+        *([f"evaluation.mf_gp_policy_version={spec.get('mf_gp_policy_version', 1)}",
+           f"evaluation.mf_gp_cost_profile={campaign / 'cost_profiles' / (task + '.json')}"]
+          if mode == "mf_gp" and spec.get("mf_gp_policy_version", 1) == 2 else []),
         f"evaluation.protocol_dir={campaign / 'protocols' / task}",
         f"agent.time_limit={spec['time_limit_seconds']}", f"agent.steps={spec['steps']}",
         f"agent.initial_drafts={spec['initial_drafts']}", f"agent.seed={spec['seed']}",
@@ -455,6 +477,7 @@ def reconcile_recovery(output, recovery):
 
 def resume(args):
     settings = ready(args.campaign)
+    validate_cost_profiles(args.campaign, settings, [args.task])
     if args.task not in settings["spec"]["tasks"] or args.mode not in settings["spec"]["modes"]:
         raise ValueError("Provide the registered --task and --mode to recover")
     output = args.campaign / "tasks" / args.task / args.mode
@@ -552,6 +575,7 @@ def worker(args):
     if Path(sys.prefix).resolve() != PYTHON.parent.parent.resolve():
         os.execv(str(PYTHON), [str(PYTHON), str(SCRIPT), *sys.argv[1:]])
     settings = ready(args.campaign)
+    validate_cost_profiles(args.campaign, settings, [args.task])
     spec = settings["spec"]
     if args.task not in spec["tasks"] or args.mode not in spec["modes"]:
         raise ValueError("Unregistered task/mode")

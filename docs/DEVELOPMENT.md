@@ -42,9 +42,10 @@ sandbox permission failure is not a failing model or algorithm assertion.
 
 - No enforced candidate filesystem sandbox; public-view instructions alone are
   not a security guarantee against accessing hidden labels or omitted rows.
-- Cost estimation is a median/paired-ratio heuristic, not architecture-aware.
-- The Gaussian surrogate is not bounded to AUC's [0,1] range. Historical ceiling
-  behavior is an observed limitation, not silently fixed by the 20% change.
+- Policy v2 cost estimation uses completed runtimes and a measured task prior;
+  it remains a median/paired-ratio heuristic, not architecture-aware.
+- The Gaussian surrogate remains unbounded. Policy v2 stops new work at an exact
+  known full-data metric ceiling; it does not clip predictions or stop on plateaus.
 - Historical source archives and experiments remain useful but do not define
   current launch defaults. Keep test/demo prompts and task descriptors in place.
 

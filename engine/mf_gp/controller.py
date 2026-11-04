@@ -37,7 +37,10 @@ class MFSelector:
     greedy = False
     full_training_only = False
 
-    def __init__(self, config, records_provider, selection_logger, low_fraction=0.5):
+    def __init__(self, config, records_provider, selection_logger, low_fraction=0.5,
+                 policy_version=1, cost_prior=None):
+        from engine.mf_gp.policy import validate_policy
+        self.policy_version, self.cost_prior = validate_policy(policy_version, cost_prior, low_fraction)
         self.config, self.records_provider, self.logger = (
             config,
             records_provider,
@@ -55,13 +58,18 @@ class MFSelector:
         self.decision_index = 0
 
     def contract(self):
-        return dict(
+        contract = dict(
             mode="mf_gp",
             schema="mf_gp_v1",
             model=self.gp.contract,
             native=asdict(self.config),
             initialization="best_plus_seeded_random",
         )
+        if self.policy_version == 2:
+            contract.update(policy_version=2, cost_prior=self.cost_prior,
+                            initialization="best_then_seeded_random_async_two_slots",
+                            ceiling="exact_known_full_metric_bound")
+        return contract
 
     def observe(self, records):
         for r in records:
@@ -106,6 +114,8 @@ class MFSelector:
                         transition_id=r.transition_id,
                         generation_seconds=r.generation_wall_time_sec,
                         execution_seconds=r.execution_wall_time_sec,
+                        completed_runtime_observation=(node.get("exec_time") is not None and node.get("exc_type") is None),
+                        runtime_lower_bound=node.get("exc_type") == "TimeoutError",
                         kind="expansion",
                     )
                 )
@@ -132,6 +142,7 @@ class MFSelector:
             o["utility"]
             for o in self.observations
             if o["valid"]
+            and (self.policy_version == 1 or o.get("budget_eligible", True))
             and o["fidelity"] == self.low_fraction
             and self.programs[o["program_id"]]["initial"]
         ]
@@ -207,6 +218,9 @@ class MFSelector:
         )
 
     def costs(self, program_id=None, operator=None):
+        if self.policy_version == 2:
+            from engine.mf_gp.policy import estimate_costs
+            return estimate_costs(self.observations, self.low_fraction, self.cost_prior, program_id, operator)
         measured = [o for o in self.observations if o["execution_seconds"] > 0]
         low = [o["execution_seconds"] for o in measured if o["fidelity"] == self.low_fraction]
         high = [o["execution_seconds"] for o in measured if o["fidelity"] == 1.0]
@@ -315,23 +329,32 @@ class MFSelector:
             if o["valid"] and o["fidelity"] == 1.0 and o.get("budget_eligible", True)
         ]
         incumbent = max(valid_high, default=None)
-        if self.calibration is None:
-            initial = [p for p in candidates if self.programs[p]["initial"]]
-            if initial:
-                low_score = {
-                    o["program_id"]: o["utility"]
-                    for o in self.observations
-                    if o["valid"] and o["fidelity"] == self.low_fraction
-                }
-                best = max(initial, key=lambda p: (low_score[p], p))
-                others = sorted(p for p in initial if p != best)
-                self.calibration = [best] + (
-                    [random.Random(int(agent.acfg.seed)).choice(others)]
-                    if others
-                    else []
-                )
-            else:
-                self.calibration = []
+        if self.policy_version == 2:
+            from engine.mf_gp.policy import fill_calibration
+            previous = list(self.calibration or [])
+            self.calibration = fill_calibration(previous, candidates, self.programs,
+                                                self.observations, int(agent.acfg.seed))
+            if self.calibration != previous and self.logger:
+                self.logger._append("mf_gp_policy.jsonl", dict(event="calibration_slots",
+                    programs=self.calibration, remaining_seconds=remaining))
+        else:
+            if self.calibration is None:
+                initial = [p for p in candidates if self.programs[p]["initial"]]
+                if initial:
+                    low_score = {
+                        o["program_id"]: o["utility"]
+                        for o in self.observations
+                        if o["valid"] and o["fidelity"] == self.low_fraction
+                    }
+                    best = max(initial, key=lambda p: (low_score[p], p))
+                    others = sorted(p for p in initial if p != best)
+                    self.calibration = [best] + (
+                        [random.Random(int(agent.acfg.seed)).choice(others)]
+                        if others
+                        else []
+                    )
+                else:
+                    self.calibration = []
         actions, targets = [], {}
         for p in sorted(candidates):
             saved = self.programs[p]
@@ -419,6 +442,10 @@ class MFSelector:
                 scores=scores,
                 chosen=chosen,
                 calibration=selected is not None,
+                **(dict(policy_version=2, cost_prior=self.cost_prior,
+                        completed_runtime_count=sum(o.get("completed_runtime_observation") is True for o in self.observations),
+                        censored_runtime_count=sum(bool(o.get("runtime_lower_bound")) for o in self.observations))
+                   if self.policy_version == 2 else {}),
                 **details,
             ),
         )
@@ -527,9 +554,14 @@ class MFRuntime(Phase1SelectorRuntime):
         if not self.acq7_enabled or self.study7_settings.method_id != "AQ05":
             raise ValueError("MF-GP requires the AQ05 native expansion workflow")
         from engine.mf_gp.settings import low_fraction
+        from engine.mf_gp.policy import load_cost_prior
         self.study7_selector = MFSelector(
             self.study7_settings, self.transition_store.records, self.selection_logger,
-            low_fraction=low_fraction(cfg)
+            low_fraction=low_fraction(cfg),
+            policy_version=getattr(cfg.evaluation, "mf_gp_policy_version", 1),
+            cost_prior=load_cost_prior(
+                getattr(cfg.evaluation, "mf_gp_cost_profile", None),
+                getattr(cfg.evaluation, "protocol_dir", None), low_fraction(cfg)),
         )
         self.surrogate = self.study7_selector.gp
         self.selectors[self.selector_type] = self.study7_selector
@@ -580,6 +612,12 @@ class MFRuntime(Phase1SelectorRuntime):
         state = self.root_draft_state
         selector = self.study7_selector
         selector.observe(self.transition_store.records())
+        if selector.policy_version == 2:
+            from engine.mf_gp.policy import exact_ceiling_reached
+            metric = agent.fixed_evaluation.spec["metric"]
+            if exact_ceiling_reached(selector.observations, metric):
+                selector.logger._append("mf_gp_policy.jsonl", dict(event="exact_metric_ceiling", metric=metric))
+                raise SearchExhausted("Valid full-data incumbent reached exact metric ceiling")
         if state["initial_terminal"] < state["initial_goal"]:
             return super()._select_global_with_root(agent)
         if not self._budget_available(agent):

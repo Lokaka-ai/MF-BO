@@ -85,3 +85,6 @@ CODE_ANALYSIS_REPORT.md
 PROMPT_COMPARISON_REPORT.md
 
 .venv-kaggle/
+
+# macOS Finder metadata; not experiment source
+.DS_Store

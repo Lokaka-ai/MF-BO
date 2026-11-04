@@ -160,7 +160,10 @@ def promote(agent, ticket, exec_callback):
         budget_eligible=eligible,
         result=grade,
         generation_seconds=0.0,
-        execution_seconds=elapsed,
+        execution_seconds=float(result.exec_time) if selector.policy_version == 2 else elapsed,
+        promotion_total_seconds=elapsed,
+        completed_runtime_observation=result.exc_type is None,
+        runtime_lower_bound=result.exc_type == "TimeoutError",
         transition_id=ticket,
         kind="promotion",
     )

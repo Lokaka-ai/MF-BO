@@ -143,3 +143,11 @@ cost-field plumbing, generation/probe contract injection, selection after code
 creation, pending-state wiring, nonblocking calibration, native recovery and
 end-to-end synthetic validation. Do not mistake component tests for a complete
 implementation. Existing v1/v2 runtime paths and frozen campaigns remain unchanged.
+
+## Real-task readiness correction, 2026-11-06
+
+Bundle 83184e5 passed local and GPU synthetic checks but failed the separate real-task lifecycle gate. No full scientific runs were launched. Probe failures left native terminal output unset, so the debugging agent crashed instead of repairing candidates. The correction records probe diagnostics as terminal output without treating probe time as a completed training observation; syntax/runtime failure tests exercise native debug after checkpoint restoration. Probe instructions now require an early T-only dispatch before loading V/test inputs.
+
+The previous 5400-second engineering gate was also too short for Melanoma's unchanged setup charge plus the 40-percent initialization guard. Engineering retries use a separately recorded larger allowance and action cap; the scientific 43200-second/500-action manifest is unchanged. Failures and the original bundle remain preserved. This correction still requires real-task validation before any claim of Mila readiness.
+
+The user has authorized preparation, debugging and launch of the three-task v3 campaign. That authorization supersedes the earlier pending-approval status; it does not relax source, evaluation, recovery or budget checks. Operational evidence is in the evidence hub under mf20_v3_campaign.

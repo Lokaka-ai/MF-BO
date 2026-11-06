@@ -14,7 +14,14 @@ import time
 
 CONTRACT = """
 Support BO_MF_PROBE=1 using the SAME preprocessing/model/loss/training and
-prediction functions as normal execution. Use only ./input (a small T-only view).
+prediction functions as normal execution. Dispatch on BO_MF_PROBE BEFORE loading
+normal evaluation inputs or requiring evaluation-output environment variables.
+In probe mode ./input contains ONLY train.csv (at most 64 T rows) and its assets:
+there is NO validation.csv, test.csv, or sample_submission.csv. Prediction uses
+one batch from these T rows; normal V/test output requirements apply ONLY outside
+probe mode. Define shared functions first, branch early, write the report and exit
+before normal execution. Unsupported estimators must likewise report and exit
+before reading normal evaluation inputs. Do not fabricate missing evaluation files.
 Run one warm-up and two timed training steps, then one prediction batch. Discard
 all weights after the probe. Never read hidden validation/test labels or report
 quality scores. Write workload metadata to BO_MF_PROBE_REPORT: schema=1,

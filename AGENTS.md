@@ -57,3 +57,11 @@
   unless explicitly asked.
 - CLI help is safe; submit/prepare commands may allocate resources, call models,
   or download data. Follow the campaign's actual readiness and recovery gates.
+
+## Responsibility for authorized experiments
+
+- Own implementation, configuration, preparation, validation, launch and verification of healthy execution through completion of the authorized task.
+- Treat a failed job as a debugging task: inspect evidence, fix defects within the approved design, validate and relaunch or resume without waiting for another instruction. Do not merely report failure and abandon the work.
+- Preserve failed attempts and frozen bundles. Version fixes and retries; never silently reset scientific budgets, erase failures or relax validity gates. Pause generation on a validity defect until corrected.
+- Verify source, settings, protocol, scheduler state, evaluator outputs and consumed budget before declaring experiments operational.
+- Ask for help only for missing access, substantive design/resource changes or external blockers requiring the user.

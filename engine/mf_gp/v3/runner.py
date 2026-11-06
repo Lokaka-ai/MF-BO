@@ -91,6 +91,10 @@ def prepare_node(agent, node, view):
             stderr = work / "stderr.log"
             if stderr.exists():
                 node.analysis += "\n" + stderr.read_text(errors="replace")[-16000:]
+            # Native debug consumes term_out, including after checkpoint recovery.
+            # This is probe evidence, never a completed training-runtime sample.
+            node._term_out = [node.analysis]
+            node.exc_type = "V3ProbeFailure"
             context = getattr(node, "_phase1_decision_context", None)
             runtime.record_transition(parent_node=node.parent, child_node=node, context=context,
                 generation_wall_time_sec=node.generation_wall_time_sec,

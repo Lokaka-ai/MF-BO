@@ -19,7 +19,7 @@ def get_impl_guideline_from_agent(agent):
             f"Time left: {_format_time(tot_time_remaining)}; steps left: {agent.acfg.steps - agent.current_step}; execution limit: {humanize.naturaldelta(exec_timeout)}.",
             agent.autoresearch.candidate_contract(),
         ]}
-    return get_impl_guideline(
+    guideline = get_impl_guideline(
         tot_time_remaining=tot_time_remaining,
         steps_remaining=agent.acfg.steps - agent.current_step,
         exec_timeout=exec_timeout,
@@ -28,6 +28,15 @@ def get_impl_guideline_from_agent(agent):
         pretrain_model_dir=getattr(agent.cfg, "pretrain_model_dir", ""),
         fixed_contract=agent.fixed_evaluation.candidate_contract() if getattr(agent, "fixed_evaluation", None) else None,
     )
+    if getattr(getattr(agent.cfg, "evaluation", None), "mf_gp_policy_version", None) == 3:
+        guideline["Implementation guideline"].append(
+            "BO_MF_PROBE=1 overrides the normal V/test output requirements above: "
+            "dispatch before reading validation/test/sample_submission or evaluation-output "
+            "environment variables. Use only the supplied T rows/assets, write the workload "
+            "report (or supported=false for unsupported estimators), and exit. "
+            "Normal execution still requires complete V/test outputs."
+        )
+    return guideline
 
 
 def _format_time(time_in_sec):

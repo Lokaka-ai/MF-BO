@@ -93,9 +93,11 @@ def test_native_v3_prepare_allocate_promote_resume(v3):
     assert finalize(agent.cfg,agent.journal)['fidelity']==1.
 
 
-def test_syntax_probe_returns_native_debug_not_quality(v3, model_responses):
+@pytest.mark.parametrize('broken', ['def broken(:\n    pass',
+    "open('input/validation.csv').read()"])
+def test_syntax_probe_returns_native_debug_not_quality(v3, model_responses, broken):
     agent,callback,view=v3
-    model_responses.code='def broken(:\n    pass'
+    model_responses.code=broken
     node=generate(agent,callback,view)
     s=agent.phase1_runtime.study7_selector
     assert node.is_buggy
@@ -103,6 +105,17 @@ def test_syntax_probe_returns_native_debug_not_quality(v3, model_responses):
     assert s.observations[-1]['valid'] is False
     assert not s.gp.rows
     assert s.observations[-1]['execution_seconds']==0
+    assert 'V3 bounded probe failed' in node.term_out
+    agent.capture_resume_state()
+    restored=AgentSearch('ignored',copy.deepcopy(agent.cfg),serialize.loads_json(serialize.dumps_json(agent.journal),Journal))
+    parent=next(n for n in restored.journal.nodes if n.id==node.id)
+    assert parent.term_out==node.term_out
+    # Exercise the real native debug prompt and code generator after recovery.
+    from engine.operator_preview import execute_operator_preview, OperatorPreview
+    model_responses.code=PROBE+CANDIDATE
+    repaired=execute_operator_preview(restored,parent,OperatorPreview(operator='debug',reason='probe_failure'))
+    import ast
+    assert ast.dump(ast.parse(repaired.code))==ast.dump(ast.parse(model_responses.code))
 
 
 @pytest.mark.parametrize('state', ['ready','executing','deferred'])

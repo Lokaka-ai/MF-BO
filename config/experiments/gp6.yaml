@@ -1,0 +1,19 @@
+# Matched experiment: differs from its paired preset ONLY in include_root_draft.
+evaluation:
+  enabled: false
+parent_selector:
+  type: gp_child_ucb
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: gp_matern32
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  acquisition:
+    type: child_ucb
+    beta: 1.5
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false

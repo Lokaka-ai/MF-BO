@@ -1,0 +1,1016 @@
+{
+  "candidate_replay_after_5": {
+    "bnvs_h1_active12": {
+      "continuation_decisions": 410,
+      "continue_rate": 0.32682926829268294,
+      "current_thompson_agreement_rate": 0.1864406779661017,
+      "current_thompson_comparable_decisions": 472,
+      "decisions": 576,
+      "factual_invalid_rate": 0.21904761904761905,
+      "factual_matches": 105,
+      "factual_mean_target": -0.4753243872600202,
+      "factual_new_incumbent_rate": 0.2,
+      "historical_agreement_rate": 0.18229166666666666,
+      "max_parent_utility_rate": 0.2222222222222222,
+      "max_selected_abs_score": 4.3579547718941,
+      "mean_selected_parent_utility_rank": 0.6275776509800993,
+      "p99_max_abs_candidate_score": 5.5649339251270025,
+      "p99_selected_abs_score": 2.6329681537418517,
+      "posterior_mean_agreement_rate": 0.3680555555555556,
+      "runs": 35
+    },
+    "bnvs_h1_feasible10": {
+      "continuation_decisions": 410,
+      "continue_rate": 0.2731707317073171,
+      "current_thompson_agreement_rate": 0.23516949152542374,
+      "current_thompson_comparable_decisions": 472,
+      "decisions": 576,
+      "factual_invalid_rate": 0.2672413793103448,
+      "factual_matches": 116,
+      "factual_mean_target": -0.5028083390661889,
+      "factual_new_incumbent_rate": 0.1896551724137931,
+      "historical_agreement_rate": 0.2013888888888889,
+      "max_parent_utility_rate": 0.24479166666666666,
+      "max_selected_abs_score": 7.127567315931373,
+      "mean_selected_parent_utility_rank": 0.6555676850401008,
+      "p99_max_abs_candidate_score": 5.487554736345866,
+      "p99_selected_abs_score": 1.7951726355934419,
+      "posterior_mean_agreement_rate": 0.3506944444444444,
+      "runs": 35
+    },
+    "bnvs_h2_active12": {
+      "continuation_decisions": 410,
+      "continue_rate": 0.3195121951219512,
+      "current_thompson_agreement_rate": 0.19703389830508475,
+      "current_thompson_comparable_decisions": 472,
+      "decisions": 576,
+      "factual_invalid_rate": 0.27884615384615385,
+      "factual_matches": 104,
+      "factual_mean_target": -0.49832962526908753,
+      "factual_new_incumbent_rate": 0.19230769230769232,
+      "historical_agreement_rate": 0.18055555555555555,
+      "max_parent_utility_rate": 0.2170138888888889,
+      "max_selected_abs_score": 4.535224358479722,
+      "mean_selected_parent_utility_rank": 0.6369727982624284,
+      "p99_max_abs_candidate_score": 5.219889040615306,
+      "p99_selected_abs_score": 2.5514688192758808,
+      "posterior_mean_agreement_rate": 0.359375,
+      "runs": 35
+    }
+  },
+  "feasible_10_feature_names": [
+    "incumbent_gap_scaled",
+    "branch_backed_gap_scaled",
+    "expansion_count_log",
+    "depth_squashed",
+    "stagnation_log",
+    "recent_gain_scaled",
+    "recent_valid_rate",
+    "remaining_budget_fraction",
+    "operator__evolution",
+    "operator__fusion"
+  ],
+  "feature_names": [
+    "incumbent_gap_scaled",
+    "branch_backed_gap_scaled",
+    "expansion_count_log",
+    "depth_squashed",
+    "stagnation_log",
+    "recent_gain_scaled",
+    "recent_valid_rate",
+    "is_active_leaf",
+    "distance_to_active_squashed",
+    "remaining_budget_fraction",
+    "operator__evolution",
+    "operator__fusion"
+  ],
+  "h2_target_after_10_valid": {
+    "bnvs_h1_active12_mean": {
+      "clipped_prediction_mae": 0.35322242004331744,
+      "invalid_mae": 0.5088992591399313,
+      "invalid_rate": 0.23877068557919623,
+      "mae": 0.36544602411308347,
+      "mean_prediction_on_invalid": -0.5324329736819076,
+      "median_absolute_error": 0.3173690168538108,
+      "n": 846,
+      "new_incumbent_precision": 0.24,
+      "new_incumbent_recall": 0.05555555555555555,
+      "p90_absolute_error": 0.7379248230869521,
+      "per_run_spearman": {
+        "mean": 0.28234599554161494,
+        "median": 0.32328804422099144,
+        "runs": 29,
+        "runs_with_defined_spearman": 28
+      },
+      "pooled_spearman": 0.3705239128051485,
+      "positive_target_rate": 0.1276595744680851,
+      "prediction_outside_target_range": 0.06855791962174941,
+      "rmse": 0.45630110984881306,
+      "runs": 29,
+      "sign_accuracy": 0.8569739952718676,
+      "valid_mae": 0.3204498230642896
+    },
+    "bnvs_h2_active12_mean": {
+      "clipped_prediction_mae": 0.36576504178049823,
+      "invalid_mae": 0.5424400954375352,
+      "invalid_rate": 0.23877068557919623,
+      "mae": 0.37807568183148005,
+      "mean_prediction_on_invalid": -0.49967379376457316,
+      "median_absolute_error": 0.31953406344220464,
+      "n": 846,
+      "new_incumbent_precision": 0.15517241379310345,
+      "new_incumbent_recall": 0.08333333333333333,
+      "p90_absolute_error": 0.7795462498428637,
+      "per_run_spearman": {
+        "mean": 0.2724318265032768,
+        "median": 0.3198730360830222,
+        "runs": 29,
+        "runs_with_defined_spearman": 28
+      },
+      "pooled_spearman": 0.3606008010500443,
+      "positive_target_rate": 0.1276595744680851,
+      "prediction_outside_target_range": 0.06382978723404255,
+      "rmse": 0.47548025615679435,
+      "runs": 29,
+      "sign_accuracy": 0.8250591016548463,
+      "valid_mae": 0.32652038439604036
+    }
+  },
+  "minimum_fitted_observations": 3,
+  "replay_errors": 0,
+  "run_count": 42,
+  "run_summaries": [
+    {
+      "candidate_decisions": 29,
+      "errors": 0,
+      "factual_predictions": 36,
+      "method": "BO",
+      "normal_transitions": 39,
+      "run": "20260904_041734_aerial-cactus-identification_8h",
+      "task": "01_aerial-cactus-identification"
+    },
+    {
+      "candidate_decisions": 2,
+      "errors": 0,
+      "factual_predictions": 2,
+      "method": "BO",
+      "normal_transitions": 5,
+      "run": "20260904_041722_aptos2019-blindness-detection_8h",
+      "task": "02_aptos2019-blindness-detection"
+    },
+    {
+      "candidate_decisions": 6,
+      "errors": 0,
+      "factual_predictions": 9,
+      "method": "BO",
+      "normal_transitions": 12,
+      "run": "20260904_041716_denoising-dirty-documents_8h",
+      "task": "03_denoising-dirty-documents"
+    },
+    {
+      "candidate_decisions": 66,
+      "errors": 0,
+      "factual_predictions": 72,
+      "method": "BO",
+      "normal_transitions": 75,
+      "run": "20260904_041750_detecting-insults-in-social-commentary_8h",
+      "task": "04_detecting-insults-in-social-commentary"
+    },
+    {
+      "candidate_decisions": 33,
+      "errors": 0,
+      "factual_predictions": 38,
+      "method": "BO",
+      "normal_transitions": 41,
+      "run": "20260904_041654_dog-breed-identification_8h",
+      "task": "05_dog-breed-identification"
+    },
+    {
+      "candidate_decisions": 45,
+      "errors": 0,
+      "factual_predictions": 50,
+      "method": "BO",
+      "normal_transitions": 53,
+      "run": "20260904_041748_dogs-vs-cats-redux-kernels-edition_8h",
+      "task": "06_dogs-vs-cats-redux-kernels-edition"
+    },
+    {
+      "candidate_decisions": 10,
+      "errors": 0,
+      "factual_predictions": 17,
+      "method": "BO",
+      "normal_transitions": 20,
+      "run": "20260904_041723_histopathologic-cancer-detection_8h",
+      "task": "07_histopathologic-cancer-detection"
+    },
+    {
+      "candidate_decisions": 7,
+      "errors": 0,
+      "factual_predictions": 11,
+      "method": "BO",
+      "normal_transitions": 14,
+      "run": "20260904_041723_jigsaw-toxic-comment-classification-challenge_8h",
+      "task": "08_jigsaw-toxic-comment-classification-challenge"
+    },
+    {
+      "candidate_decisions": 27,
+      "errors": 0,
+      "factual_predictions": 42,
+      "method": "BO",
+      "normal_transitions": 45,
+      "run": "20260904_041645_leaf-classification_8h",
+      "task": "09_leaf-classification"
+    },
+    {
+      "candidate_decisions": 72,
+      "errors": 0,
+      "factual_predictions": 76,
+      "method": "BO",
+      "normal_transitions": 79,
+      "run": "20260904_040802_mlsp-2013-birds_8h",
+      "task": "10_mlsp-2013-birds"
+    },
+    {
+      "candidate_decisions": 12,
+      "errors": 0,
+      "factual_predictions": 17,
+      "method": "BO",
+      "normal_transitions": 20,
+      "run": "20260904_041612_new-york-city-taxi-fare-prediction_8h",
+      "task": "11_new-york-city-taxi-fare-prediction"
+    },
+    {
+      "candidate_decisions": 34,
+      "errors": 0,
+      "factual_predictions": 39,
+      "method": "BO",
+      "normal_transitions": 42,
+      "run": "20260904_041602_nomad2018-predict-transparent-conductors_8h",
+      "task": "12_nomad2018-predict-transparent-conductors"
+    },
+    {
+      "candidate_decisions": 8,
+      "errors": 0,
+      "factual_predictions": 13,
+      "method": "BO",
+      "normal_transitions": 16,
+      "run": "20260904_041602_plant-pathology-2020-fgvc7_8h",
+      "task": "13_plant-pathology-2020-fgvc7"
+    },
+    {
+      "candidate_decisions": 62,
+      "errors": 0,
+      "factual_predictions": 66,
+      "method": "BO",
+      "normal_transitions": 69,
+      "run": "20260904_041608_random-acts-of-pizza_8h",
+      "task": "14_random-acts-of-pizza"
+    },
+    {
+      "candidate_decisions": 0,
+      "errors": 0,
+      "factual_predictions": 1,
+      "method": "BO",
+      "normal_transitions": 4,
+      "run": "20260904_041551_ranzcr-clip-catheter-line-classification_8h",
+      "task": "15_ranzcr-clip-catheter-line-classification"
+    },
+    {
+      "candidate_decisions": 32,
+      "errors": 0,
+      "factual_predictions": 38,
+      "method": "BO",
+      "normal_transitions": 41,
+      "run": "20260904_041523_spooky-author-identification_8h",
+      "task": "17_spooky-author-identification"
+    },
+    {
+      "candidate_decisions": 11,
+      "errors": 0,
+      "factual_predictions": 18,
+      "method": "BO",
+      "normal_transitions": 21,
+      "run": "20260904_041419_tabular-playground-series-dec-2021_8h",
+      "task": "18_tabular-playground-series-dec-2021"
+    },
+    {
+      "candidate_decisions": 6,
+      "errors": 0,
+      "factual_predictions": 7,
+      "method": "BO",
+      "normal_transitions": 10,
+      "run": "20260904_041458_tabular-playground-series-may-2022_8h",
+      "task": "19_tabular-playground-series-may-2022"
+    },
+    {
+      "candidate_decisions": 0,
+      "errors": 0,
+      "factual_predictions": 3,
+      "method": "BO",
+      "normal_transitions": 6,
+      "run": "20260904_041438_text-normalization-challenge-english-language_8h",
+      "task": "20_text-normalization-challenge-english-language"
+    },
+    {
+      "candidate_decisions": 0,
+      "errors": 0,
+      "factual_predictions": 1,
+      "method": "BO",
+      "normal_transitions": 4,
+      "run": "20260904_041404_text-normalization-challenge-russian-language_8h",
+      "task": "21_text-normalization-challenge-russian-language"
+    },
+    {
+      "candidate_decisions": 11,
+      "errors": 0,
+      "factual_predictions": 16,
+      "method": "BO",
+      "normal_transitions": 19,
+      "run": "20260904_041346_the-icml-2013-whale-challenge-right-whale-redux_8h",
+      "task": "22_the-icml-2013-whale-challenge-right-whale-redux"
+    },
+    {
+      "candidate_decisions": 15,
+      "errors": 0,
+      "factual_predictions": 58,
+      "method": "Legacy",
+      "normal_transitions": 61,
+      "run": "20260904_041740_aerial-cactus-identification_8h",
+      "task": "01_aerial-cactus-identification"
+    },
+    {
+      "candidate_decisions": 2,
+      "errors": 0,
+      "factual_predictions": 5,
+      "method": "Legacy",
+      "normal_transitions": 8,
+      "run": "20260904_041742_aptos2019-blindness-detection_8h",
+      "task": "02_aptos2019-blindness-detection"
+    },
+    {
+      "candidate_decisions": 0,
+      "errors": 0,
+      "factual_predictions": 12,
+      "method": "Legacy",
+      "normal_transitions": 15,
+      "run": "20260904_041716_denoising-dirty-documents_8h",
+      "task": "03_denoising-dirty-documents"
+    },
+    {
+      "candidate_decisions": 19,
+      "errors": 0,
+      "factual_predictions": 101,
+      "method": "Legacy",
+      "normal_transitions": 104,
+      "run": "20260904_041802_detecting-insults-in-social-commentary_8h",
+      "task": "04_detecting-insults-in-social-commentary"
+    },
+    {
+      "candidate_decisions": 5,
+      "errors": 0,
+      "factual_predictions": 42,
+      "method": "Legacy",
+      "normal_transitions": 45,
+      "run": "20260904_041740_dog-breed-identification_8h",
+      "task": "05_dog-breed-identification"
+    },
+    {
+      "candidate_decisions": 3,
+      "errors": 0,
+      "factual_predictions": 22,
+      "method": "Legacy",
+      "normal_transitions": 25,
+      "run": "20260904_040719_dogs-vs-cats-redux-kernels-edition_8h",
+      "task": "06_dogs-vs-cats-redux-kernels-edition"
+    },
+    {
+      "candidate_decisions": 0,
+      "errors": 0,
+      "factual_predictions": 4,
+      "method": "Legacy",
+      "normal_transitions": 7,
+      "run": "20260904_040719_histopathologic-cancer-detection_8h",
+      "task": "07_histopathologic-cancer-detection"
+    },
+    {
+      "candidate_decisions": 2,
+      "errors": 0,
+      "factual_predictions": 9,
+      "method": "Legacy",
+      "normal_transitions": 12,
+      "run": "20260904_041723_jigsaw-toxic-comment-classification-challenge_8h",
+      "task": "08_jigsaw-toxic-comment-classification-challenge"
+    },
+    {
+      "candidate_decisions": 15,
+      "errors": 0,
+      "factual_predictions": 63,
+      "method": "Legacy",
+      "normal_transitions": 66,
+      "run": "20260904_041717_leaf-classification_8h",
+      "task": "09_leaf-classification"
+    },
+    {
+      "candidate_decisions": 17,
+      "errors": 0,
+      "factual_predictions": 79,
+      "method": "Legacy",
+      "normal_transitions": 82,
+      "run": "20260904_041640_mlsp-2013-birds_8h",
+      "task": "10_mlsp-2013-birds"
+    },
+    {
+      "candidate_decisions": 5,
+      "errors": 0,
+      "factual_predictions": 15,
+      "method": "Legacy",
+      "normal_transitions": 18,
+      "run": "20260904_040732_new-york-city-taxi-fare-prediction_8h",
+      "task": "11_new-york-city-taxi-fare-prediction"
+    },
+    {
+      "candidate_decisions": 2,
+      "errors": 0,
+      "factual_predictions": 16,
+      "method": "Legacy",
+      "normal_transitions": 19,
+      "run": "20260904_041631_nomad2018-predict-transparent-conductors_8h",
+      "task": "12_nomad2018-predict-transparent-conductors"
+    },
+    {
+      "candidate_decisions": 3,
+      "errors": 0,
+      "factual_predictions": 16,
+      "method": "Legacy",
+      "normal_transitions": 19,
+      "run": "20260904_041602_plant-pathology-2020-fgvc7_8h",
+      "task": "13_plant-pathology-2020-fgvc7"
+    },
+    {
+      "candidate_decisions": 5,
+      "errors": 0,
+      "factual_predictions": 31,
+      "method": "Legacy",
+      "normal_transitions": 34,
+      "run": "20260904_041602_random-acts-of-pizza_8h",
+      "task": "14_random-acts-of-pizza"
+    },
+    {
+      "candidate_decisions": 0,
+      "errors": 0,
+      "factual_predictions": 0,
+      "method": "Legacy",
+      "normal_transitions": 3,
+      "run": "20260904_041600_ranzcr-clip-catheter-line-classification_8h",
+      "task": "15_ranzcr-clip-catheter-line-classification"
+    },
+    {
+      "candidate_decisions": 5,
+      "errors": 0,
+      "factual_predictions": 40,
+      "method": "Legacy",
+      "normal_transitions": 43,
+      "run": "20260904_041523_spooky-author-identification_8h",
+      "task": "17_spooky-author-identification"
+    },
+    {
+      "candidate_decisions": 2,
+      "errors": 0,
+      "factual_predictions": 6,
+      "method": "Legacy",
+      "normal_transitions": 9,
+      "run": "20260904_041523_tabular-playground-series-dec-2021_8h",
+      "task": "18_tabular-playground-series-dec-2021"
+    },
+    {
+      "candidate_decisions": 5,
+      "errors": 0,
+      "factual_predictions": 26,
+      "method": "Legacy",
+      "normal_transitions": 29,
+      "run": "20260904_040918_tabular-playground-series-may-2022_8h",
+      "task": "19_tabular-playground-series-may-2022"
+    },
+    {
+      "candidate_decisions": 1,
+      "errors": 0,
+      "factual_predictions": 3,
+      "method": "Legacy",
+      "normal_transitions": 6,
+      "run": "20260904_041449_text-normalization-challenge-english-language_8h",
+      "task": "20_text-normalization-challenge-english-language"
+    },
+    {
+      "candidate_decisions": 2,
+      "errors": 0,
+      "factual_predictions": 4,
+      "method": "Legacy",
+      "normal_transitions": 7,
+      "run": "20260904_041417_text-normalization-challenge-russian-language_8h",
+      "task": "21_text-normalization-challenge-russian-language"
+    },
+    {
+      "candidate_decisions": 2,
+      "errors": 0,
+      "factual_predictions": 16,
+      "method": "Legacy",
+      "normal_transitions": 19,
+      "run": "20260904_041355_the-icml-2013-whale-challenge-right-whale-redux_8h",
+      "task": "22_the-icml-2013-whale-challenge-right-whale-redux"
+    }
+  ],
+  "runs_root": "/private/tmp/bo42_acq.qpJ3qE/bo-failure-analysis-42/runs",
+  "same_target_h1_after_10_valid": {
+    "bnvs_h1_active12_mean": {
+      "clipped_prediction_mae": 0.3424900014293407,
+      "invalid_mae": 0.5088992591399313,
+      "invalid_rate": 0.23877068557919623,
+      "mae": 0.3547136054991067,
+      "mean_prediction_on_invalid": -0.5324329736819076,
+      "median_absolute_error": 0.303591090978534,
+      "n": 846,
+      "new_incumbent_precision": 0.2,
+      "new_incumbent_recall": 0.056818181818181816,
+      "p90_absolute_error": 0.7228002909487439,
+      "per_run_spearman": {
+        "mean": 0.3001692752821028,
+        "median": 0.36296292442197753,
+        "runs": 29,
+        "runs_with_defined_spearman": 28
+      },
+      "pooled_spearman": 0.3862049962331024,
+      "positive_target_rate": 0.10401891252955082,
+      "prediction_outside_target_range": 0.06855791962174941,
+      "rmse": 0.44034586717969165,
+      "runs": 29,
+      "sign_accuracy": 0.8782505910165485,
+      "valid_mae": 0.30635102469872383
+    },
+    "bnvs_h1_feasible10_mean": {
+      "clipped_prediction_mae": 0.3412789022973062,
+      "invalid_mae": 0.5101445623565194,
+      "invalid_rate": 0.23877068557919623,
+      "mae": 0.35335461659699957,
+      "mean_prediction_on_invalid": -0.5302191589387626,
+      "median_absolute_error": 0.30258493869273306,
+      "n": 846,
+      "new_incumbent_precision": 0.23809523809523808,
+      "new_incumbent_recall": 0.056818181818181816,
+      "p90_absolute_error": 0.720071385000826,
+      "per_run_spearman": {
+        "mean": 0.2866413887441087,
+        "median": 0.30452596810381605,
+        "runs": 29,
+        "runs_with_defined_spearman": 28
+      },
+      "pooled_spearman": 0.3895662526600258,
+      "positive_target_rate": 0.10401891252955082,
+      "prediction_outside_target_range": 0.06028368794326241,
+      "rmse": 0.43807488956116586,
+      "runs": 29,
+      "sign_accuracy": 0.8829787234042553,
+      "valid_mae": 0.3041751615606284
+    },
+    "current_gain_acquisition15_mean": {
+      "clipped_prediction_mae": 0.30798334127887517,
+      "invalid_mae": 1.3796048594488122,
+      "invalid_rate": 0.23877068557919623,
+      "mae": 0.8125486471258452,
+      "mean_prediction_on_invalid": -1.0791024619889287,
+      "median_absolute_error": 0.2994519126897023,
+      "n": 846,
+      "new_incumbent_precision": 0.27927927927927926,
+      "new_incumbent_recall": 0.3522727272727273,
+      "p90_absolute_error": 1.0173164269949515,
+      "per_run_spearman": {
+        "mean": 0.26412162753271556,
+        "median": 0.37038922219965287,
+        "runs": 29,
+        "runs_with_defined_spearman": 28
+      },
+      "pooled_spearman": 0.4395057146500826,
+      "positive_target_rate": 0.10401891252955082,
+      "prediction_outside_target_range": 0.22104018912529552,
+      "rmse": 3.896040069493409,
+      "runs": 29,
+      "sign_accuracy": 0.8380614657210402,
+      "valid_mae": 0.6346831892232997
+    },
+    "current_gain_raw15_mean": {
+      "clipped_prediction_mae": 0.37318879780165454,
+      "invalid_mae": 1.2214388403530314,
+      "invalid_rate": 0.23877068557919623,
+      "mae": 0.9960376867238111,
+      "mean_prediction_on_invalid": -0.8518526698341706,
+      "median_absolute_error": 0.36801957510258293,
+      "n": 846,
+      "new_incumbent_precision": 0.2138728323699422,
+      "new_incumbent_recall": 0.42045454545454547,
+      "p90_absolute_error": 1.557234719945952,
+      "per_run_spearman": {
+        "mean": 0.19124570230502133,
+        "median": 0.30180602511958876,
+        "runs": 29,
+        "runs_with_defined_spearman": 28
+      },
+      "pooled_spearman": 0.3682851271830155,
+      "positive_target_rate": 0.10401891252955082,
+      "prediction_outside_target_range": 0.28132387706855794,
+      "rmse": 4.922411200681065,
+      "runs": 29,
+      "sign_accuracy": 0.7789598108747045,
+      "valid_mae": 0.9253373248711674
+    },
+    "incumbent_target_current15_mean": {
+      "clipped_prediction_mae": 0.35156983024149485,
+      "invalid_mae": 0.5567444837364339,
+      "invalid_rate": 0.23877068557919623,
+      "mae": 0.37146614854053644,
+      "mean_prediction_on_invalid": -0.5238844256001305,
+      "median_absolute_error": 0.3190746824731775,
+      "n": 846,
+      "new_incumbent_precision": 0.21212121212121213,
+      "new_incumbent_recall": 0.07954545454545454,
+      "p90_absolute_error": 0.7487238976994246,
+      "per_run_spearman": {
+        "mean": 0.2656391712622864,
+        "median": 0.34683671100820823,
+        "runs": 29,
+        "runs_with_defined_spearman": 28
+      },
+      "pooled_spearman": 0.35789796202969465,
+      "positive_target_rate": 0.10401891252955082,
+      "prediction_outside_target_range": 0.06619385342789598,
+      "rmse": 0.4763826758993466,
+      "runs": 29,
+      "sign_accuracy": 0.8735224586288416,
+      "valid_mae": 0.3133508943331277
+    }
+  },
+  "warmup": {
+    "10": {
+      "bnvs_h1_active12_mean": {
+        "clipped_prediction_mae": 0.3465040801926267,
+        "invalid_mae": 0.5128929804161918,
+        "invalid_rate": 0.23449830890642615,
+        "mae": 0.35816266986908907,
+        "mean_prediction_on_invalid": -0.5272469764588632,
+        "median_absolute_error": 0.3048160024181572,
+        "n": 887,
+        "new_incumbent_precision": 0.2222222222222222,
+        "new_incumbent_recall": 0.06315789473684211,
+        "p90_absolute_error": 0.7266329170050628,
+        "per_run_spearman": {
+          "mean": 0.3041871411529304,
+          "median": 0.25498768476115363,
+          "runs": 31,
+          "runs_with_defined_spearman": 28
+        },
+        "pooled_spearman": 0.3836144996586522,
+        "positive_target_rate": 0.10710259301014656,
+        "prediction_outside_target_range": 0.06538895152198422,
+        "rmse": 0.44812572656939115,
+        "runs": 31,
+        "sign_accuracy": 0.8759864712514093,
+        "valid_mae": 0.3107636940313903
+      },
+      "bnvs_h1_feasible10_mean": {
+        "clipped_prediction_mae": 0.3454260727435558,
+        "invalid_mae": 0.5140959860659345,
+        "invalid_rate": 0.23449830890642615,
+        "mae": 0.3569436085919669,
+        "mean_prediction_on_invalid": -0.5251033971150606,
+        "median_absolute_error": 0.3032978412456002,
+        "n": 887,
+        "new_incumbent_precision": 0.2727272727272727,
+        "new_incumbent_recall": 0.06315789473684211,
+        "p90_absolute_error": 0.7238396084644033,
+        "per_run_spearman": {
+          "mean": 0.29107672472667384,
+          "median": 0.2615220835865137,
+          "runs": 31,
+          "runs_with_defined_spearman": 28
+        },
+        "pooled_spearman": 0.3869593070227252,
+        "positive_target_rate": 0.10710259301014656,
+        "prediction_outside_target_range": 0.05749718151071026,
+        "rmse": 0.44585025486078816,
+        "runs": 31,
+        "sign_accuracy": 0.8816234498308907,
+        "valid_mae": 0.3088026741080416
+      }
+    },
+    "15": {
+      "bnvs_h1_active12_mean": {
+        "clipped_prediction_mae": 0.33608301781695443,
+        "invalid_mae": 0.4904617422613574,
+        "invalid_rate": 0.2368064952638701,
+        "mae": 0.3473411520677068,
+        "mean_prediction_on_invalid": -0.5380285351131352,
+        "median_absolute_error": 0.3051180106700449,
+        "n": 739,
+        "new_incumbent_precision": 0.07692307692307693,
+        "new_incumbent_recall": 0.013513513513513514,
+        "p90_absolute_error": 0.6825762433592807,
+        "per_run_spearman": {
+          "mean": 0.27718295378089886,
+          "median": 0.3415730377538836,
+          "runs": 27,
+          "runs_with_defined_spearman": 25
+        },
+        "pooled_spearman": 0.39915969244709665,
+        "positive_target_rate": 0.10013531799729364,
+        "prediction_outside_target_range": 0.07171853856562922,
+        "rmse": 0.42369855174156745,
+        "runs": 27,
+        "sign_accuracy": 0.8849797023004059,
+        "valid_mae": 0.30293316752180455
+      },
+      "bnvs_h1_feasible10_mean": {
+        "clipped_prediction_mae": 0.3352986198069738,
+        "invalid_mae": 0.4918454356878566,
+        "invalid_rate": 0.2368064952638701,
+        "mae": 0.3464435305351523,
+        "mean_prediction_on_invalid": -0.5360243635687402,
+        "median_absolute_error": 0.3032978412456002,
+        "n": 739,
+        "new_incumbent_precision": 0.09090909090909091,
+        "new_incumbent_recall": 0.013513513513513514,
+        "p90_absolute_error": 0.6813734878804979,
+        "per_run_spearman": {
+          "mean": 0.2524304892415321,
+          "median": 0.31853755364824754,
+          "runs": 27,
+          "runs_with_defined_spearman": 25
+        },
+        "pooled_spearman": 0.40147257124053837,
+        "positive_target_rate": 0.10013531799729364,
+        "prediction_outside_target_range": 0.06224627875507442,
+        "rmse": 0.42199959788007774,
+        "runs": 27,
+        "sign_accuracy": 0.8876860622462788,
+        "valid_mae": 0.3013276911703949
+      }
+    },
+    "20": {
+      "bnvs_h1_active12_mean": {
+        "clipped_prediction_mae": 0.327544376518581,
+        "invalid_mae": 0.4967603718453316,
+        "invalid_rate": 0.23289902280130292,
+        "mae": 0.3401363554422239,
+        "mean_prediction_on_invalid": -0.5380192317378744,
+        "median_absolute_error": 0.29963968480779507,
+        "n": 614,
+        "new_incumbent_precision": 0.0,
+        "new_incumbent_recall": 0.0,
+        "p90_absolute_error": 0.6629233277990838,
+        "per_run_spearman": {
+          "mean": 0.3655281295511681,
+          "median": 0.41179507366345114,
+          "runs": 19,
+          "runs_with_defined_spearman": 18
+        },
+        "pooled_spearman": 0.41841341068820936,
+        "positive_target_rate": 0.09446254071661238,
+        "prediction_outside_target_range": 0.07980456026058631,
+        "rmse": 0.41463777012139014,
+        "runs": 19,
+        "sign_accuracy": 0.8925081433224755,
+        "valid_mae": 0.292583840907947
+      },
+      "bnvs_h1_feasible10_mean": {
+        "clipped_prediction_mae": 0.3266807625349175,
+        "invalid_mae": 0.4991653194678206,
+        "invalid_rate": 0.23289902280130292,
+        "mae": 0.339255013774126,
+        "mean_prediction_on_invalid": -0.5349410782238189,
+        "median_absolute_error": 0.2955272110977574,
+        "n": 614,
+        "new_incumbent_precision": 0.0,
+        "new_incumbent_recall": 0.0,
+        "p90_absolute_error": 0.6599184124230921,
+        "per_run_spearman": {
+          "mean": 0.36275245729678146,
+          "median": 0.4214533499369801,
+          "runs": 19,
+          "runs_with_defined_spearman": 18
+        },
+        "pooled_spearman": 0.42307289447741986,
+        "positive_target_rate": 0.09446254071661238,
+        "prediction_outside_target_range": 0.07003257328990228,
+        "rmse": 0.4127261200299445,
+        "runs": 19,
+        "sign_accuracy": 0.8973941368078175,
+        "valid_mae": 0.2907047511112846
+      }
+    },
+    "3": {
+      "bnvs_h1_active12_mean": {
+        "clipped_prediction_mae": 0.3678549316113406,
+        "invalid_mae": 0.5414775214228553,
+        "invalid_rate": 0.2324561403508772,
+        "mae": 0.3812275672641024,
+        "mean_prediction_on_invalid": -0.49002855793567845,
+        "median_absolute_error": 0.31611788847040645,
+        "n": 1140,
+        "new_incumbent_precision": 0.34831460674157305,
+        "new_incumbent_recall": 0.1962025316455696,
+        "p90_absolute_error": 0.7921772435419776,
+        "per_run_spearman": {
+          "mean": 0.3243291061754655,
+          "median": 0.38114820689092954,
+          "runs": 41,
+          "runs_with_defined_spearman": 33
+        },
+        "pooled_spearman": 0.39602235849986167,
+        "positive_target_rate": 0.13859649122807016,
+        "prediction_outside_target_range": 0.05789473684210526,
+        "rmse": 0.4914698858579787,
+        "runs": 41,
+        "sign_accuracy": 0.8377192982456141,
+        "valid_mae": 0.3326947240045944
+      },
+      "bnvs_h1_feasible10_mean": {
+        "clipped_prediction_mae": 0.36615298187293316,
+        "invalid_mae": 0.5421232862772767,
+        "invalid_rate": 0.2324561403508772,
+        "mae": 0.37938769390220584,
+        "mean_prediction_on_invalid": -0.4886445314647873,
+        "median_absolute_error": 0.31155134185955985,
+        "n": 1140,
+        "new_incumbent_precision": 0.36904761904761907,
+        "new_incumbent_recall": 0.1962025316455696,
+        "p90_absolute_error": 0.7866462625629493,
+        "per_run_spearman": {
+          "mean": 0.3320659835627154,
+          "median": 0.40089186286863665,
+          "runs": 41,
+          "runs_with_defined_spearman": 33
+        },
+        "pooled_spearman": 0.402040115884229,
+        "positive_target_rate": 0.13859649122807016,
+        "prediction_outside_target_range": 0.05175438596491228,
+        "rmse": 0.4889699734231231,
+        "runs": 41,
+        "sign_accuracy": 0.8421052631578947,
+        "valid_mae": 0.3301020573543271
+      }
+    },
+    "30": {
+      "bnvs_h1_active12_mean": {
+        "clipped_prediction_mae": 0.3225674775349614,
+        "invalid_mae": 0.48831931727075806,
+        "invalid_rate": 0.2460136674259681,
+        "mae": 0.33782532429232415,
+        "mean_prediction_on_invalid": -0.5480141150309203,
+        "median_absolute_error": 0.3048160024181572,
+        "n": 439,
+        "new_incumbent_precision": 0.0,
+        "new_incumbent_recall": 0.0,
+        "p90_absolute_error": 0.6404373658534096,
+        "per_run_spearman": {
+          "mean": 0.2607681134825556,
+          "median": 0.35276438233468366,
+          "runs": 16,
+          "runs_with_defined_spearman": 16
+        },
+        "pooled_spearman": 0.41101530869000186,
+        "positive_target_rate": 0.08428246013667426,
+        "prediction_outside_target_range": 0.0979498861047836,
+        "rmse": 0.404087666563993,
+        "runs": 16,
+        "sign_accuracy": 0.9134396355353075,
+        "valid_mae": 0.28872154410600737
+      },
+      "bnvs_h1_feasible10_mean": {
+        "clipped_prediction_mae": 0.3216383208085425,
+        "invalid_mae": 0.49080132313707464,
+        "invalid_rate": 0.2460136674259681,
+        "mae": 0.3368839493779525,
+        "mean_prediction_on_invalid": -0.5446528642666384,
+        "median_absolute_error": 0.3019768777914822,
+        "n": 439,
+        "new_incumbent_precision": null,
+        "new_incumbent_recall": 0.0,
+        "p90_absolute_error": 0.6353646739348034,
+        "per_run_spearman": {
+          "mean": 0.28033381981463634,
+          "median": 0.36801678274562755,
+          "runs": 16,
+          "runs_with_defined_spearman": 16
+        },
+        "pooled_spearman": 0.4193392103417603,
+        "positive_target_rate": 0.08428246013667426,
+        "prediction_outside_target_range": 0.08428246013667426,
+        "rmse": 0.40158788136969326,
+        "runs": 16,
+        "sign_accuracy": 0.9157175398633257,
+        "valid_mae": 0.28666317485835985
+      }
+    },
+    "5": {
+      "bnvs_h1_active12_mean": {
+        "clipped_prediction_mae": 0.35751476951927663,
+        "invalid_mae": 0.5299552027455788,
+        "invalid_rate": 0.2339622641509434,
+        "mae": 0.36948938535826426,
+        "mean_prediction_on_invalid": -0.5037105675367254,
+        "median_absolute_error": 0.3086122829811552,
+        "n": 1060,
+        "new_incumbent_precision": 0.3064516129032258,
+        "new_incumbent_recall": 0.13970588235294118,
+        "p90_absolute_error": 0.7604199821300813,
+        "per_run_spearman": {
+          "mean": 0.27351694833708295,
+          "median": 0.31332527556122697,
+          "runs": 38,
+          "runs_with_defined_spearman": 31
+        },
+        "pooled_spearman": 0.3996326962798916,
+        "positive_target_rate": 0.12830188679245283,
+        "prediction_outside_target_range": 0.06037735849056604,
+        "rmse": 0.4760085395587874,
+        "runs": 38,
+        "sign_accuracy": 0.8490566037735849,
+        "valid_mae": 0.3204801209345524
+      },
+      "bnvs_h1_feasible10_mean": {
+        "clipped_prediction_mae": 0.3557330234154084,
+        "invalid_mae": 0.5307959502924603,
+        "invalid_rate": 0.2339622641509434,
+        "mae": 0.3675558074971791,
+        "mean_prediction_on_invalid": -0.5020809517303098,
+        "median_absolute_error": 0.3045727256815108,
+        "n": 1060,
+        "new_incumbent_precision": 0.3333333333333333,
+        "new_incumbent_recall": 0.13970588235294118,
+        "p90_absolute_error": 0.7448511092290544,
+        "per_run_spearman": {
+          "mean": 0.29122692373491593,
+          "median": 0.33212937628238415,
+          "runs": 38,
+          "runs_with_defined_spearman": 31
+        },
+        "pooled_spearman": 0.40616768196425457,
+        "positive_target_rate": 0.12830188679245283,
+        "prediction_outside_target_range": 0.05377358490566038,
+        "rmse": 0.4732853182235208,
+        "runs": 38,
+        "sign_accuracy": 0.8537735849056604,
+        "valid_mae": 0.31769921216068925
+      }
+    },
+    "8": {
+      "bnvs_h1_active12_mean": {
+        "clipped_prediction_mae": 0.3502878903013137,
+        "invalid_mae": 0.5180277496577073,
+        "invalid_rate": 0.2342436974789916,
+        "mae": 0.3616369795853142,
+        "mean_prediction_on_invalid": -0.5194122101181288,
+        "median_absolute_error": 0.30632820090948965,
+        "n": 952,
+        "new_incumbent_precision": 0.32432432432432434,
+        "new_incumbent_recall": 0.10714285714285714,
+        "p90_absolute_error": 0.7400091015433468,
+        "per_run_spearman": {
+          "mean": 0.28863206167795785,
+          "median": 0.2862789340853476,
+          "runs": 33,
+          "runs_with_defined_spearman": 29
+        },
+        "pooled_spearman": 0.38813347435982465,
+        "positive_target_rate": 0.11764705882352941,
+        "prediction_outside_target_range": 0.06512605042016807,
+        "rmse": 0.45223523308759495,
+        "runs": 33,
+        "sign_accuracy": 0.8686974789915967,
+        "valid_mae": 0.31379727900075505
+      },
+      "bnvs_h1_feasible10_mean": {
+        "clipped_prediction_mae": 0.348841963685918,
+        "invalid_mae": 0.5195289293333601,
+        "invalid_rate": 0.2342436974789916,
+        "mae": 0.36002214040278824,
+        "mean_prediction_on_invalid": -0.5170337240372541,
+        "median_absolute_error": 0.3043948847888049,
+        "n": 952,
+        "new_incumbent_precision": 0.375,
+        "new_incumbent_recall": 0.10714285714285714,
+        "p90_absolute_error": 0.7288909356158761,
+        "per_run_spearman": {
+          "mean": 0.3012387774772549,
+          "median": 0.2772822657979882,
+          "runs": 33,
+          "runs_with_defined_spearman": 29
+        },
+        "pooled_spearman": 0.3928376484232248,
+        "positive_target_rate": 0.11764705882352941,
+        "prediction_outside_target_range": 0.05777310924369748,
+        "rmse": 0.4496193268609588,
+        "runs": 33,
+        "sign_accuracy": 0.8739495798319328,
+        "valid_mae": 0.3112292543513238
+      }
+    }
+  }
+}

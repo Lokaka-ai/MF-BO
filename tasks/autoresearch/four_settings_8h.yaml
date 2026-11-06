@@ -1,0 +1,13 @@
+duration_seconds: 28800
+max_trials: 500
+cpus: 4
+settings:
+- gp7_ancestry_ucb
+- gp7_long_horizon_ucb
+- mlevolve_original
+- gp7_long_horizon_ucb_pibo
+overrides:
+  agent.code.model: opencode/muse-spark-1.3-contributor-free
+  agent.code.base_url: opencode://opencode
+  agent.feedback.model: opencode/muse-spark-1.3-contributor-free
+  agent.feedback.base_url: opencode://opencode

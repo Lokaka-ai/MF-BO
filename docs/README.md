@@ -1,0 +1,67 @@
+# Documentation index
+
+## Current guidance
+
+- [Project contract](../PROJECT.md): completed study, next-stage scope and interpretation.
+- [MF-BO v3 proposal](MFGP_V3_PROPOSAL.md): evidence, design, literature, approved implementation and validation plan.
+- [V3 implementation evidence](MFGP_V3_IMPLEMENTATION.md): native integration, local tests and remaining Mila gate.
+- [20% campaign](MFGP20.md): implemented fraction contract and historical local checks.
+- [Policy v2](MFGP_POLICY_V2.md): implemented scheduling behavior and completed-study status.
+- [Development guide](DEVELOPMENT.md): active code paths and failure triage.
+- [Preparation utilities](../tasks/mlebench_lite/README.md): distinguish current launcher from legacy tools.
+
+## Historical campaign archive
+
+[Archived root documents](archive/legacy-campaigns/INDEX.md) preserve the previous
+README, MF-GP design/audits and Mila runbooks. Their launch defaults and readiness
+claims are historical. They are not the current operating instructions.
+
+## Retained upstream/reference material
+
+The documents below are reference/provenance, not current campaign policy.
+They remain at their existing paths because configs, reports or inherited tools
+refer to them. In particular the two AQ05 owner/collaborator runbooks anchor the
+resource_sources fields. Other-selector research is background, not an approved
+change to the current controller. Read these only when the issue calls for them.
+
+- [AB_IMPLEMENTATION_AND_RUN_zh.md](AB_IMPLEMENTATION_AND_RUN_zh.md)
+- [ALPHAEVOLVE15_AQ05_CPU_RUN_20260921_zh.md](ALPHAEVOLVE15_AQ05_CPU_RUN_20260921_zh.md)
+- [ALPHAEVOLVE_IMPLEMENTATION_AND_VALIDATION_zh.md](ALPHAEVOLVE_IMPLEMENTATION_AND_VALIDATION_zh.md)
+- [ALPHAEVOLVE_RESULT_COMPARISON_20260921_zh.md](ALPHAEVOLVE_RESULT_COMPARISON_20260921_zh.md)
+- [ALPHAEVOLVE_TOKEN_AUDIT_20260921_zh.md](ALPHAEVOLVE_TOKEN_AUDIT_20260921_zh.md)
+- [BNVS_BASELINE_OFFLINE_COMPARISON.md](BNVS_BASELINE_OFFLINE_COMPARISON.md)
+- [BNVS_DESIGN_AND_OFFLINE_DECISION.md](BNVS_DESIGN_AND_OFFLINE_DECISION.md)
+- [BNVS_OFFLINE_COMPARISON.md](BNVS_OFFLINE_COMPARISON.md)
+- [BNVS_ROOT_DRAFT.md](BNVS_ROOT_DRAFT.md)
+- [BO_PENDING_PARENT_POLICY_zh.md](BO_PENDING_PARENT_POLICY_zh.md)
+- [CONTINUATION_AWARE_SELECTOR.md](CONTINUATION_AWARE_SELECTOR.md)
+- [FIXED_EVALUATION_LIVE_VALIDATION_zh.md](FIXED_EVALUATION_LIVE_VALIDATION_zh.md)
+- [FIXED_EVALUATION_PROTOCOL_zh.md](FIXED_EVALUATION_PROTOCOL_zh.md)
+- [FIXED_EVALUATION_VALIDATION_zh.md](FIXED_EVALUATION_VALIDATION_zh.md)
+- [GP6_CHANGED_FILES.md](GP6_CHANGED_FILES.md)
+- [GP6_IMPLEMENTATION_AND_RUN.md](GP6_IMPLEMENTATION_AND_RUN.md)
+- [GP6_TEST_REPORT.md](GP6_TEST_REPORT.md)
+- [HF_MCGS_OWNER_SYNC_20260922_zh.md](HF_MCGS_OWNER_SYNC_20260922_zh.md)
+- [LEGACY_RUN_FINALIZATION_AUDIT_zh.md](LEGACY_RUN_FINALIZATION_AUDIT_zh.md)
+- [LONG_HORIZON_A_zh.md](LONG_HORIZON_A_zh.md)
+- [MLEBENCH_LITE_AQ05_COLLABORATOR_RUNBOOK_20260920_zh.md](MLEBENCH_LITE_AQ05_COLLABORATOR_RUNBOOK_20260920_zh.md)
+- [MLEBENCH_LITE_AQ05_OWNER_RUN_20260921_zh.md](MLEBENCH_LITE_AQ05_OWNER_RUN_20260921_zh.md)
+- [MLEBENCH_LITE_AQ05_TASK_SPLIT_20260920_zh.md](MLEBENCH_LITE_AQ05_TASK_SPLIT_20260920_zh.md)
+- [MLEBENCH_LITE_MCGS_COLLABORATOR_RUNBOOK_20260921_zh.md](MLEBENCH_LITE_MCGS_COLLABORATOR_RUNBOOK_20260921_zh.md)
+- [MLEBENCH_LITE_MCGS_OWNER_RUN_20260922_zh.md](MLEBENCH_LITE_MCGS_OWNER_RUN_20260922_zh.md)
+- [MLEVOLVE_BO_VS_AGENT_20260921_zh.md](MLEVOLVE_BO_VS_AGENT_20260921_zh.md)
+- [NANOGPT_HANDOFF_zh.md](NANOGPT_HANDOFF_zh.md)
+- [OPENCODE_TEST_REPORT_20260924_zh.md](OPENCODE_TEST_REPORT_20260924_zh.md)
+- [OPENCODE_zh.md](OPENCODE_zh.md)
+- [PHASE1_BASELINE_AUDIT.md](PHASE1_BASELINE_AUDIT.md)
+- [PHASE1_BO_PARENT_SELECTOR.md](PHASE1_BO_PARENT_SELECTOR.md)
+- [PHASE1_REPRODUCTION.md](PHASE1_REPRODUCTION.md)
+- [PHASE1_TRANSITION_DATA.md](PHASE1_TRANSITION_DATA.md)
+- [PIBO_AGENT_RATING_zh.md](PIBO_AGENT_RATING_zh.md)
+- [REWARD_ONLY_ACQUISITION_REPLAY.md](REWARD_ONLY_ACQUISITION_REPLAY.md)
+- [REWARD_ONLY_LATENT_UCB_REPLAY.md](REWARD_ONLY_LATENT_UCB_REPLAY.md)
+- [REWARD_ONLY_LOCAL_SELECTOR.md](REWARD_ONLY_LOCAL_SELECTOR.md)
+- [REWARD_ONLY_OFFLINE_EVALUATION.md](REWARD_ONLY_OFFLINE_EVALUATION.md)
+- [REWARD_ONLY_WARMUP_SWEEP.md](REWARD_ONLY_WARMUP_SWEEP.md)
+- [THREE_SELECTOR_SETTINGS_zh.md](THREE_SELECTOR_SETTINGS_zh.md)
+- [UPSTREAM_README.md](UPSTREAM_README.md)

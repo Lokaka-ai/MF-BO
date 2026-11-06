@@ -1,0 +1,50 @@
+{
+  "source_archive": "EvolveFold-xixian-dev (3).zip",
+  "scope": "MLEvolve_BO only",
+  "modified_existing_files": [
+    "MLEvolve_BO/config/__init__.py",
+    "MLEvolve_BO/engine/parent_selectors/base.py",
+    "MLEvolve_BO/engine/parent_selectors/runtime.py",
+    "MLEvolve_BO/engine/parent_selectors/transition_store.py",
+    "MLEvolve_BO/engine/search_node.py",
+    "MLEvolve_BO/scripts/run_selector_suite.sh",
+    "MLEvolve_BO/scripts/run_selector_task.sh",
+    "MLEvolve_BO/tests_gp6/test_runtime_contract.py"
+  ],
+  "new_files": [
+    "MLEvolve_BO/config/experiments/gp7_ancestry_logei.yaml",
+    "MLEvolve_BO/config/experiments/laplacian_anchor_logei.yaml",
+    "MLEvolve_BO/docs/AB_IMPLEMENTATION_AND_RUN_zh.md",
+    "MLEvolve_BO/docs/ab_validation/change_manifest.json",
+    "MLEvolve_BO/docs/ab_validation/native_integration_attempt.log",
+    "MLEvolve_BO/docs/ab_validation/offline_reference_parity.json",
+    "MLEvolve_BO/docs/ab_validation/offline_reference_parity.log",
+    "MLEvolve_BO/docs/ab_validation/smoke_graph_selectors.json",
+    "MLEvolve_BO/docs/ab_validation/static_checks.log",
+    "MLEvolve_BO/docs/ab_validation/unit_tests.log",
+    "MLEvolve_BO/engine/parent_selectors/gp_graph_features.py",
+    "MLEvolve_BO/engine/parent_selectors/gp_graph_surrogate.py",
+    "MLEvolve_BO/scripts/smoke_graph_selectors.py",
+    "MLEvolve_BO/tests/test_graph_runtime.py",
+    "MLEvolve_BO/tests_gp6/test_graph_selectors.py",
+    "MLEvolve_BO/tools/verify_graph_reference.py"
+  ],
+  "deleted_files": [],
+  "unchanged_files_outside_MLEvolve_BO": 1164,
+  "tests": {
+    "lightweight_unique_tests_passed": 76,
+    "native_agent_test_bodies_executed": 0,
+    "native_blocker": "Missing original dependency dataclasses_json",
+    "reference_cases_passed": 138,
+    "reference_runs": 35,
+    "max_prediction_abs_error": 5.551115123125783e-16,
+    "llm_calls": 0,
+    "gpu_runs": 0
+  },
+  "packaging": {
+    "full_archive": "EvolveFold_MLEvolve_BO_AB.zip",
+    "overlay_archive": "MLEvolve_BO_AB_patch.zip",
+    "overlay_root": "MLEvolve_BO/",
+    "no_deletions": true
+  }
+}

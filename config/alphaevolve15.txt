@@ -1,0 +1,15 @@
+hexagon_packing
+circle_packing_square
+circle_packing_rectangle
+heilbronn_convex
+heilbronn_triangle
+kissing_number_d11
+sums_differences_1
+sums_differences_2
+uncertainty_inequality
+first_autocorrelation
+third_autocorrelation_variant
+third_autocorrelation
+second_autocorrelation
+max_min_ratio
+minimum_overlap

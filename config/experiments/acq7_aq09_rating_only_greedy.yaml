@@ -1,0 +1,31 @@
+evaluation:
+  enabled: false
+parent_selector:
+  type: study7_rating_only_greedy
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: study7_no_surrogate
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  agent_rating:
+    enabled: false
+  acquisition:
+    type: rating_greedy
+    beta: 0.0
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+study7:
+  method_id: AQ09
+  schema: study7_rating_only_v1
+  ancestor:
+    enabled: false
+  rating:
+    enabled: true
+branch7:
+  enabled: false
+acq7:
+  enabled: false

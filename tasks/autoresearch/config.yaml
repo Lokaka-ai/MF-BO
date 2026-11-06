@@ -1,0 +1,18 @@
+# nanoGPT defaults; other search/planner/memory settings inherit config/config.yaml.
+# Explicit CLI/campaign overrides and saved resume configurations take precedence.
+task_type: autoresearch
+exp_id: autoresearch-nanogpt
+exp_name: autoresearch-nanogpt
+preprocess_data: false
+use_grading_server: false
+evaluation:
+  enabled: false  # The task's immutable BPB evaluator replaces Kaggle V/test scoring.
+agent:
+  search:
+    parallel_search_num: 2
+  code:
+    model: opencode/muse-spark-1.3-contributor-free
+    base_url: "opencode://opencode"
+  feedback:
+    model: opencode/muse-spark-1.3-contributor-free
+    base_url: "opencode://opencode"

@@ -1,0 +1,54 @@
+{
+  "schema": 1,
+  "selector": "MF-GP",
+  "seed": 42,
+  "time_limit_seconds": 43200,
+  "steps": 500,
+  "initial_drafts": 3,
+  "workers": 3,
+  "candidate_timeout_seconds": 32400,
+  "gpu_gres": "gpu:a100l:1",
+  "slurm_time": "13:00:00",
+  "modes": [
+    "mf_gp"
+  ],
+  "training_fraction": 0.2,
+  "model": "muse-spark-1.3-contributor",
+  "provider": "codex://opencode-go",
+  "reasoning_effort": "high",
+  "differences_from_historical_aq05": [
+    "Shared fixed validation enabled; historical search used candidate-reported evaluation.",
+    "Redesigned evolution retained.",
+    "Winner is the best valid full-training fixed-validation node; historical run used legacy final fusion.",
+    "One continuous allocation is requested; historical owner runs included interruptions and runtime repairs.",
+    "Contextual autoregressive MF-GP, adaptive cost-aware acquisition and immutable full-data promotions; original AQ05 kept as an experimental baseline.",
+    "Codex CLI 0.164.0 pinned for all arms; historical CLI version unverified. Current documented Go Responses endpoint used.",
+    "Mandatory initial low-data drafts stop at 40% of the active-time budget; full-data executions retain the nine-hour candidate cap.",
+    "New isolated 20%/100% campaign; frozen validation unchanged; execution attempt costs recorded.",
+    "Policy v2: completed-runtime cost evidence, measured task cost prior, asynchronous calibration slots and exact-metric-ceiling stop."
+  ],
+  "resource_sources": {
+    "owner": "docs/MLEBENCH_LITE_AQ05_OWNER_RUN_20260921_zh.md: recorded per-task allocations",
+    "collaborator": "docs/MLEBENCH_LITE_AQ05_COLLABORATOR_RUNBOOK_20260920_zh.md: documented requested allocations, not verified completed runs"
+  },
+  "tasks": {
+    "jigsaw-toxic-comment-classification-challenge": {
+      "cpus": 4,
+      "memory_gb": 64,
+      "source": "owner"
+    },
+    "siim-isic-melanoma-classification": {
+      "cpus": 21,
+      "memory_gb": 128,
+      "source": "collaborator"
+    },
+    "dog-breed-identification": {
+      "cpus": 21,
+      "memory_gb": 128,
+      "source": "collaborator"
+    }
+  },
+  "codex_version": "0.164.0",
+  "purpose": "Approved three-task 20%/100% MF-GP campaign; preparation and GPU validation required before full search",
+  "mf_gp_policy_version": 2
+}

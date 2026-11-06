@@ -1,0 +1,46 @@
+# Acq7 v1.0. Legacy UCB fields are inactive; only acq7.acquisition_type selects.
+evaluation:
+  enabled: false
+parent_selector:
+  type: acq7_gp4
+  decision_scope: all_normal_steps
+  include_root_draft: false
+bo_parent_selector:
+  model: acq7_gp4
+  min_valid_transitions: 0
+  min_total_transitions: 0
+  min_operator_observations: 0
+  refit_every: 1
+  agent_rating:
+    enabled: false
+  acquisition:
+    type: joint_ts
+    beta: 0.0
+    beta_schedule: fixed
+    use_validity_probability: false
+    use_cost: false
+study7:
+  method_id: AQ08
+  schema: acq7_gp4_v1
+  ancestor:
+    enabled: false
+  rating:
+    enabled: true
+branch7:
+  enabled: false
+  branch_prior_std: 1.5
+  mapping_version: root_lineage_primary_v1
+acq7:
+  enabled: true
+  branch_kind: level_matern32
+  branch_prior_std: 2.0
+  branch_lengthscale: 1.0
+  slope_prior_std: 0.0
+  acquisition_type: joint_ts
+  pending_policy: native_no_fantasy
+  performance_coordinate: raw_parent_centered_over_frozen_s0
+  rng_algorithm: PCG64
+  rng_purpose_id: 7301
+  official_draws_per_decision: 1
+  max_acquisition_seconds: 30.0
+  legacy_ucb_fields_inactive: true

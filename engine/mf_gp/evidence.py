@@ -15,7 +15,7 @@ def quality(agent, node):
     if full:
         return full["utility"]
     if own:
-        row = {k: own[0][k] for k in ("program_id", "x", "operator")}
+        row = {k: own[0][k] for k in ("program_id", "x", "operator", "raw_context") if k in own[0]}
         return float(selector.gp.posterior([{**row, "fidelity": 1.0}])[0][0])
     return float("-inf")
 

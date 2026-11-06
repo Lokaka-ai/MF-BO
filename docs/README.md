@@ -2,8 +2,11 @@
 
 ## Current guidance
 
-- [Project contract](../PROJECT.md): selected study, controls and interpretation.
-- [20% campaign](MFGP20.md): fidelity settings, cost records and validation limits.
+- [Project contract](../PROJECT.md): completed study, next-stage scope and interpretation.
+- [MF-BO v3 proposal](MFGP_V3_PROPOSAL.md): evidence, design, literature, approved implementation and validation plan.
+- [V3 implementation evidence](MFGP_V3_IMPLEMENTATION.md): native integration, local tests and remaining Mila gate.
+- [20% campaign](MFGP20.md): implemented fraction contract and historical local checks.
+- [Policy v2](MFGP_POLICY_V2.md): implemented scheduling behavior and completed-study status.
 - [Development guide](DEVELOPMENT.md): active code paths and failure triage.
 - [Preparation utilities](../tasks/mlebench_lite/README.md): distinguish current launcher from legacy tools.
 

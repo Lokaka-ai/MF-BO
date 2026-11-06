@@ -58,7 +58,9 @@ class MFEvaluation(FixedEvaluation):
         )
 
     def candidate_contract(self):
-        return super().candidate_contract() + (
+        from engine.mf_gp.v3.probe import CONTRACT
+        probe = CONTRACT if getattr(self.cfg.evaluation, "mf_gp_policy_version", 1) == 3 else ""
+        return super().candidate_contract() + probe + (
             f"\nThe host may execute this SAME saved program with a fixed {self.low_fraction:.0%} or 100% T view. "
             "Design the pipeline for the full task; use only the supplied ./input view. "
             "Keep training rules and seeds in the executable. Fidelity-tagged score "
@@ -160,7 +162,8 @@ def promote(agent, ticket, exec_callback):
         budget_eligible=eligible,
         result=grade,
         generation_seconds=0.0,
-        execution_seconds=float(result.exec_time) if selector.policy_version == 2 else elapsed,
+        execution_seconds=float(result.exec_time) if selector.policy_version in (2, 3) else elapsed,
+        **(dict(host_seconds=max(0., elapsed-float(result.exec_time))) if selector.policy_version == 3 else {}),
         promotion_total_seconds=elapsed,
         completed_runtime_observation=result.exc_type is None,
         runtime_lower_bound=result.exc_type == "TimeoutError",

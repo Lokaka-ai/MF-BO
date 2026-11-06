@@ -2,14 +2,28 @@
 
 ## Scope and sources of truth
 
-- Read PROJECT.md, then docs/DEVELOPMENT.md. Current campaign settings live in
-  config/mlebench_mfgp20.json; use tasks/mlebench_lite/mila_mfgp20.py.
+- Read PROJECT.md, then docs/DEVELOPMENT.md. Policy v2 is implemented; its
+  three-task study is completed in the 2026-11-04 evidence snapshot. The approved v3 is integrated and locally validated; see
+  docs/MFGP_V3_IMPLEMENTATION.md. Real-task Mila validation remains outstanding.
+  config/mlebench_mfgp20.json and tasks/mlebench_lite/mila_mfgp20.py reproduce v2;
+  they are not a new launch plan.
 - Current canonical checkout: /Users/mac/Coding Project/Multi Fidelity BO.
   The old AI4AI/projects/bo_engine/mfgp20 path is a compatibility symlink.
 - docs/archive and dated owner/collaborator reports are historical evidence.
   They do not override current user decisions or current campaign settings.
 - Preserve old 50% carryover/reset/MF-GP workflows. Ten percent is supported for
   diagnostics, but is not the selected campaign.
+
+## Evidence and project state
+
+- Start with the completed trajectories under the evidence hub named in PROJECT.md,
+  verify the actual implementation, then use literature to assess interventions.
+- Preserve the distinction between implemented behavior, observed outcomes, and a
+  proposed policy. V3 is locally implemented; do not describe it as cluster-validated.
+- Optimize the final eligible full-data outcome under budget. Extra cheap actions
+  or generated nodes are not evidence of better performance by themselves.
+- Keep project guidance concise; put mechanism, evidence and implementation plans
+  in the linked proposal. Operational receipts are history, not live job status.
 
 ## Scientific and implementation invariants
 

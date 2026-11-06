@@ -251,7 +251,10 @@ def prepare(args):
          "tests/test_acq7_math.py", "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
          "tests/test_mila_failure_regressions.py", "tests/test_mila_leaderboard.py",
          "tests/test_go_campaign.py", "tests/test_codex_retry.py", "tests/test_kaggle_download.py",
-         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py", "tests/test_mfgp_policy_v2.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py", "tests/test_mfgp_policy_v2.py"] if "mf_gp" in settings["spec"]["modes"] else []),
+         *(["tests/test_mfgp_v3_foundation.py", "tests/test_mfgp_v3_model.py", "tests/test_mfgp_v3_prepared.py",
+            "tests/test_mfgp_v3_probe.py", "tests/test_mfgp_v3_mes.py", "tests/test_mfgp_v3_integration.py"]
+           if settings["spec"].get("mf_gp_policy_version") == 3 else [])], env=env)
     run([PYTHON, "tasks/mlebench_lite/check_environment.py", "--embedding",
          "--output", args.campaign / "cpu-environment.json"], env=env)
     run(provider_check_command(settings, args.campaign / "provider-check.json"), env=env)
@@ -299,7 +302,7 @@ def validate_gpu_partition(partition, resources):
 
 def validate_cost_profiles(campaign, settings, tasks):
     spec = settings["spec"]
-    if spec.get("mf_gp_policy_version", 1) != 2:
+    if spec.get("mf_gp_policy_version", 1) not in (2, 3):
         return {}
     from engine.mf_gp.policy import load_cost_prior
     priors = {task: load_cost_prior(campaign / "cost_profiles" / (task + ".json"),
@@ -375,7 +378,10 @@ def preflight(args):
     run(provider_check_command(settings, args.campaign / "gpu-provider-check.json"), env=env)
     run([PYTHON, "-m", "pytest", "-q", "-p", "no:cacheprovider",
          "tests/test_multifidelity_integration.py", "tests/test_mf_recovery.py",
-         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py", "tests/test_mfgp_policy_v2.py"] if "mf_gp" in settings["spec"]["modes"] else [])], env=env)
+         *(["tests/test_mf_gp.py", "tests/test_mfgp_audit.py", "tests/test_mfgp_campaign.py", "tests/test_mfgp_fraction.py", "tests/test_mfgp_policy_v2.py"] if "mf_gp" in settings["spec"]["modes"] else []),
+         *(["tests/test_mfgp_v3_foundation.py", "tests/test_mfgp_v3_model.py", "tests/test_mfgp_v3_prepared.py",
+            "tests/test_mfgp_v3_probe.py", "tests/test_mfgp_v3_mes.py", "tests/test_mfgp_v3_integration.py"]
+           if settings["spec"].get("mf_gp_policy_version") == 3 else [])], env=env)
     save(args.campaign / "gpu-ready.json", {
         "settings_sha256": sha(args.campaign / "settings.json"),
         "job_id": os.environ["SLURM_JOB_ID"], "gpu": props.name,
@@ -396,7 +402,7 @@ def search_command(settings, campaign, task, mode, python=PYTHON):
         *([f"evaluation.mf_gp_low_fraction={spec['training_fraction']}"] if mode == "mf_gp" else []),
         *([f"evaluation.mf_gp_policy_version={spec.get('mf_gp_policy_version', 1)}",
            f"evaluation.mf_gp_cost_profile={campaign / 'cost_profiles' / (task + '.json')}"]
-          if mode == "mf_gp" and spec.get("mf_gp_policy_version", 1) == 2 else []),
+          if mode == "mf_gp" and spec.get("mf_gp_policy_version", 1) in (2, 3) else []),
         f"evaluation.protocol_dir={campaign / 'protocols' / task}",
         f"agent.time_limit={spec['time_limit_seconds']}", f"agent.steps={spec['steps']}",
         f"agent.initial_drafts={spec['initial_drafts']}", f"agent.seed={spec['seed']}",

@@ -1,5 +1,10 @@
 # Code map and focused debugging
 
+Policy v3 is integrated and locally validated; see [implementation evidence](MFGP_V3_IMPLEMENTATION.md).
+Its runner/controller live in `engine/mf_gp/v3`; the separate v3 manifest selects them.
+The saved three-task study and call path below describe preserved policy v2.
+Real-task Mila validation remains outstanding.
+
 ## Execution path
 
 `mila_mfgp20.py` selects the manifest and delegates to `mila_multifidelity.py`.
@@ -49,6 +54,31 @@ sandbox permission failure is not a failing model or algorithm assertion.
 - Historical source archives and experiments remain useful but do not define
   current launch defaults. Keep test/demo prompts and task descriptors in place.
 
+## Findings from the completed study
+
+The v3 proposal maps each finding to its evidence, mechanism and proposed change.
+Prioritize these paths over broad refactoring:
+
+- Expansion timing spans candidate execution plus host review; promotion timing
+  used by the estimator is candidate-process-only. Align scopes before fitting a
+  new cost model. Keep total spent cost separately.
+- Output scaling freezes from the first available initial reference. Context
+  features depend on that scale too; changing normalization requires consistent
+  raw-context storage and a new checkpoint contract, not just a new divisor.
+- Pending calibration blocks ordinary allocation; the global budget guard can
+  irreversibly enter terminal mode. These are current v2 behavior, not bugs fixed
+  by the v3 documentation.
+- New-program fidelity/cost is chosen before child generation. Any deferred-choice
+  implementation must separate generation reservations from pending observations,
+  count sunk costs, bound prepared code and preserve exact recovery state.
+- Syntax and partial-patch errors reached real executions. A new pre-execution
+  contract needs coverage tests; passing a tiny probe cannot guarantee a long run.
+
+Do not attribute the rare cheap decisions exclusively to runtime estimates: the
+logged acquisition value of low alternatives was often orders of magnitude
+smaller even when their estimated costs were lower. An offline alternative-policy
+replay cannot provide unknown rewards for actions the original run did not take.
+
 ## Safe documentation maintenance
 
 Only human-facing documentation was reorganized in the 2026-11-03 cleanup.
@@ -56,3 +86,9 @@ The protected-file manifest outside this repo covers all tracked non-doc files
 and runtime Markdown (prompts/task descriptors). Verify it before committing.
 Do not rerun expensive GPU tests merely because documentation moved. Full source
 bundle hashes will still change with a documentation commit; preserve old bundles.
+
+The 2026-11-05 research review is also documentation-only in this repository.
+Pre-edit copies and all tracked-file hashes are under the evidence hub's
+next_version_2026-11-05/. Verify that only the explicitly listed guidance files
+changed. Do not treat this documentation update as a runtime correction or a
+reason to rerun cluster gates.

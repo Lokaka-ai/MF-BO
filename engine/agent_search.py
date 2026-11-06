@@ -407,6 +407,9 @@ class AgentSearch:
         init_solution_path: Optional[str] = None,
     ):
         """Run one search step: select action (draft/debug/improve), execute, parse, validate."""
+        if (getattr(self.cfg.evaluation, "multifidelity_mode", None) == "mf_gp"
+                and getattr(self.cfg.evaluation, "mf_gp_policy_version", 1) == 3):
+            execute_immediately = False
         result_node = None
         _root = False
         root_enabled = getattr(self.phase1_runtime, "managed_decisions", False)

@@ -1,4 +1,9 @@
-# Approved 20% MF-GP development scope
+# Implemented 20% MF-GP contract
+
+Status updated 2026-11-05: this fraction/cost-record implementation was followed by
+[policy v2](MFGP_POLICY_V2.md) and the completed three-task campaign in source
+14605cb. The historical implementation/test notes below are retained with their
+scope. Current research is the [v3 proposal](MFGP_V3_PROPOSAL.md), not another v2 launch.
 
 This checkout branches from frozen pilot commit 315687813e501695ac249046779016965ede0d6b.
 The prior source repository and campaign manifests are preserved. The initial
@@ -7,11 +12,11 @@ Use external operational receipts and live Slurm evidence for current status.
 
 ## Task and fidelity contract
 
-- Selected next campaign: Jigsaw, SIIM-ISIC Melanoma, Dog Breed Identification.
+- Completed policy-v2 campaign: Jigsaw, SIIM-ISIC Melanoma, Dog Breed Identification.
 - Melanoma and Dog Breed: 21 CPU / 128 GiB host memory / one A100 80 GB,
   from the collaborator runbook (not verified completed owner allocations).
 - RANZCR remains prior development evidence; excluded from this new campaign.
-- Jigsaw Toxic Comments: next comparison, 4 CPU / 64 GiB / one A100 80 GB.
+- Jigsaw Toxic Comments: historical comparison available, 4 CPU / 64 GiB / one A100 80 GB.
   Jigsaw uses the historical owner allocation; it was not 24 GiB.
 - New launcher: `python tasks/mlebench_lite/mila_mfgp20.py --help`.
 - New manifest: `config/mlebench_mfgp20.json`; default campaign `runs/mf20_gp`.
@@ -59,17 +64,18 @@ Worker seconds overlap; they are not elapsed search seconds or allocated GPU-hou
 An expansion estimate includes generation, while a promotion estimate excludes
 generation. Do not compare expansion prediction to process runtime alone.
 
-## Boundaries before experiments
+## Historical fraction-only scope and later policy-v2 changes
 
-This implements fraction support and cost measurement, not a new fitted runtime
-model. The historical median/paired-ratio estimator and its initial ratio of 2
-remain unchanged. In particular, a default factor of 2 is not a calibrated
-20%-to-full ratio. This is a known profiling gate before a costly campaign:
-measure actual cost separation and then approve any predictor/prior change.
+The original fraction-only change added cost measurement without a new fitted
+runtime model; it retained the historical median/paired-ratio estimator and a
+default ratio of 2. That uncalibrated ratio is still relevant to legacy defaults,
+but is not the selected policy-v2 campaign prior. Policy v2 requires a measured
+same-code profile and uses completed-runtime evidence. It changed calibration
+slot handling and exact-ceiling stopping; see its own contract for details.
 
-Likewise the previous initial-pair policy and GP regularization are unchanged;
-the earlier audit found limited paired evidence in RANZCR. New fraction support
-does not fix or prove cross-fidelity calibration quality.
+The two-level GP and regularization remain. Limited paired evidence was observed
+in RANZCR and again in the completed Melanoma study. Fraction support and a measured
+cost prior do not establish cross-fidelity calibration or final-performance gains.
 
 Use identical-code low/full diagnostics to measure runtime saving, rank changes,
 minority-label coverage, failures and memory feasibility. Report diagnostic costs

@@ -1,4 +1,9 @@
-# Approved MF-GP scheduling corrections
+# Implemented MF-GP scheduling policy v2
+
+Status updated 2026-11-05: the three-task v2 campaign completed in frozen source
+14605cb. Its reports and trajectories are under the evidence path in PROJECT.md.
+The behavior below remains the reproduction contract. The [v3 proposal](MFGP_V3_PROPOSAL.md)
+documents observed limitations and requested changes; those changes are not implemented.
 
 Policy 2 is explicit in `config/mlebench_mfgp20.json`. Default config and legacy
 50% manifests retain policy 1. The GP covariance, noise, features, target-full
@@ -72,10 +77,17 @@ worker and freezes their parsed values and receipt hashes in
 checkpoint contract also includes the prior and policy version. Changed profiles
 or switching policy versions cannot silently resume an existing run.
 
-No new profile has been measured on Mila by this implementation task. Therefore
-the new campaign is not yet cluster-certified or ready for full submission.
-Use a newly frozen bundle, existing preparation/GPU gates, a measured profile,
-and a real worker startup check. Old bundles/receipts remain historical evidence.
+The initial implementation note said the campaign had not yet been profiled or
+certified. That readiness statement is superseded: the 14605cb campaign subsequently
+passed preparation, GPU and task gates, measured its priors and completed all
+three tasks (Jigsaw completed through budget-preserving recovery). See
+`analysis/mf20_v2_2026-11-04/REPORT.txt` in the evidence hub. This verifies that
+campaign, not arbitrary future workloads or a proposed v3 implementation.
+
+Audit caveat: expansion runtime samples currently include host scoring/review,
+whereas promotion/profile samples use candidate-process wall time. The estimator
+pools those scopes. Historical receipts are unchanged; harmonizing the scopes is
+an explicit v3 correction, not something policy v2 already guarantees.
 
 ## Verification
 

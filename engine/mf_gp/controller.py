@@ -555,7 +555,11 @@ class MFRuntime(Phase1SelectorRuntime):
             raise ValueError("MF-GP requires the AQ05 native expansion workflow")
         from engine.mf_gp.settings import low_fraction
         from engine.mf_gp.policy import load_cost_prior
-        self.study7_selector = MFSelector(
+        selector_type = MFSelector
+        if getattr(cfg.evaluation, "mf_gp_policy_version", 1) == 3:
+            from engine.mf_gp.v3.controller import V3Selector
+            selector_type = V3Selector
+        self.study7_selector = selector_type(
             self.study7_settings, self.transition_store.records, self.selection_logger,
             low_fraction=low_fraction(cfg),
             policy_version=getattr(cfg.evaluation, "mf_gp_policy_version", 1),
@@ -611,6 +615,9 @@ class MFRuntime(Phase1SelectorRuntime):
     def _select_global_with_root(self, agent):
         state = self.root_draft_state
         selector = self.study7_selector
+        if selector.policy_version == 3:
+            from engine.mf_gp.v3.runtime import select_global
+            return select_global(self, agent)
         selector.observe(self.transition_store.records())
         if selector.policy_version == 2:
             from engine.mf_gp.policy import exact_ceiling_reached
@@ -696,7 +703,16 @@ class MFRuntime(Phase1SelectorRuntime):
         self.root_draft_state["pending"][context.decision.decision_id]["option"][
             "state_features"
         ]["mf"] = copy.deepcopy(mf)
+        if self.study7_selector.policy_version == 3:
+            self.study7_selector.generated(node, context)
+            node.training_fraction = None  # advisory fidelity is not a reservation
         return super().attach_decision(node, context)
+
+    def _reconcile_pending(self, agent):
+        super()._reconcile_pending(agent)
+        if self.study7_selector.policy_version == 3:
+            from engine.mf_gp.v3.runtime import reconcile
+            reconcile(self, agent)
 
     def _record_root_terminal(self, **kwargs):
         row = super()._record_root_terminal(**kwargs)

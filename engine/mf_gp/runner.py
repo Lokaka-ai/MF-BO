@@ -36,6 +36,9 @@ def run(cfg):
                 )
             )
         )
+    if getattr(cfg.evaluation, "mf_gp_policy_version", 1) == 3:
+        from engine.mf_gp.v3.runner import run_search
+        return run_search(cfg, logger)
     resume = bool(cfg.resume_run_dir)
     journal = (
         serialize.load_json(cfg.log_dir / "journal.json", Journal)
